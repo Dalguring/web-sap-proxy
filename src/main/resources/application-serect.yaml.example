@@ -1,0 +1,14 @@
+# application-secret.yml.example
+# 복사해서 application-secret.yml로 사용
+
+sap:
+  jco:
+    destination-name: SAP_SYSTEM
+    ashost: your-sap-host.com    # SAP 서버 주소
+    sysnr: "00"                   # 시스템 번호
+    client: "100"                 # 클라이언트
+    user: YOUR_USERNAME           # SAP 사용자
+    passwd: YOUR_PASSWORD         # SAP 비밀번호
+    lang: KO
+    pool-capacity: 10
+    peak-limit: 20

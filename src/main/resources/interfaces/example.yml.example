@@ -1,0 +1,102 @@
+interface:
+  id: STOCK_MOVEMENT
+  name: "재고이동 전송"
+  description: "WMS → SAP 재고 이동 데이터 전송"
+  rfcFunction: IF_MOVE_STOCK
+
+  importMapping: []
+
+  tableMapping:
+    - webField: movements
+      sapTable: ITF_WMS_MOVEMENT
+      singleValue: false
+      fields:
+
+        - webField: bwart
+          sapField: BWART
+          type: string
+          required: true
+
+        - webField: budat
+          sapField: BUDAT
+          type: string
+
+        - webField: werks
+          sapField: WERKS
+          type: string
+
+        - webField: matnr
+          sapField: MATNR
+          type: string
+
+        - webField: lgort
+          sapField: LGORT
+          type: string
+
+        - webField: charg
+          sapField: CHARG
+          type: string
+
+        - webField: menge
+          sapField: MENGE
+          type: string
+
+        - webField: ummat
+          sapField: UMMAT
+          type: string
+
+        - webField: umwrk
+          sapField: UMWRK
+          type: string
+
+        - webField: umlgo
+          sapField: UMLGO
+          type: string
+
+        - webField: umcha
+          sapField: UMCHA
+          type: string
+
+        - webField: kostl
+          sapField: KOSTL
+          type: string
+
+        - webField: usnam
+          sapField: USNAM
+          type: string
+
+  exportMapping: []
+
+  returnTableMapping:
+    - sapTable: ET_RETURN
+      webField: results
+      fields:
+        - sapField: WERKS
+          webField: werks
+
+        - sapField: MATNR
+          webField: matnr
+
+        - sapField: MBLNR
+          webField: mblnr
+
+        - sapField: MJAHR
+          webField: mjahr
+
+        - sapField: ZEILE
+          webField: zeile
+
+        - sapField: TYPE
+          webField: type
+
+        - sapField: MESSAGE
+          webField: message
+
+        - sapField: IF_DATE
+          webField: ifDate
+
+        - sapField: IF_TIME
+          webField: ifTime
+
+        - sapField: IF_SEQ
+          webField: ifSeq
