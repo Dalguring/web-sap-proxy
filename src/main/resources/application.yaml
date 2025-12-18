@@ -24,6 +24,10 @@ spring:
       enabled: true
       path: /h2-console
 
+  # secret yaml 파일 profile
+  profiles:
+    active: secret
+
 # 서버 포트
 server:
   port: 8080
