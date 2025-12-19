@@ -19,9 +19,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<SimpleProxyResponse> handleValidationException(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldname = ((FieldError) error).getField();
+            String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
-            errors.put(fieldname, errorMessage);
+            errors.put(fieldName, errorMessage);
         });
 
         log.error("Validation error: {}", errors);
@@ -41,14 +41,17 @@ public class GlobalExceptionHandler {
 
         SimpleProxyResponse response = SimpleProxyResponse.error(ex.getMessage());
 
-        return ResponseEntity.badRequest().body(response);  // ← 400
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(ProxyException.class)
     public ResponseEntity<SimpleProxyResponse> handleProxyException(ProxyException ex) {
         log.error("Proxy error: {}", ex.getMessage(), ex);
 
-        SimpleProxyResponse response = SimpleProxyResponse.error(ex.getMessage());
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+                ex.getMessage(),
+                ex.getRequestId()
+        );
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
