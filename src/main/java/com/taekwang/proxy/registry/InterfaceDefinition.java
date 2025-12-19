@@ -34,6 +34,7 @@ public class InterfaceDefinition {
         private String webField;
         private String sapTable;
         private boolean singleValue;
+        private boolean required;
         private List<FieldMapping> fields;
     }
 

@@ -1,5 +1,6 @@
 package com.taekwang.proxy.controller;
 
+import com.taekwang.proxy.context.RequestContext;
 import com.taekwang.proxy.model.SimpleProxyRequest;
 import com.taekwang.proxy.model.SimpleProxyResponse;
 import com.taekwang.proxy.registry.InterfaceDefinition;
@@ -24,15 +25,19 @@ import java.util.stream.Collectors;
 public class ProxyController {
     private final InterfaceRegistry registry;
     private final ProxyService proxyService;
+    private final RequestContext requestContext;
 
     /**
      * Proxy 요청 실행
      */
     @PostMapping("/execute")
     public ResponseEntity<SimpleProxyResponse> execute(@Validated @RequestBody SimpleProxyRequest request) {
-        if (request.getRequestId() == null) {
+        if (request.getRequestId() == null || request.getRequestId().isBlank()) {
             request.setRequestId(UUID.randomUUID().toString());
         }
+        
+        // RequestId 전역 저장
+        requestContext.setRequestId(request.getRequestId());
 
         log.info("Received proxy request - ID: {}, Interface: {}", request.getRequestId(), request.getInterfaceId());
 

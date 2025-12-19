@@ -1,10 +1,13 @@
 package com.taekwang.proxy.service;
 
+import com.taekwang.proxy.context.RequestContext;
+import com.taekwang.proxy.exception.InterfaceMappingException;
 import com.taekwang.proxy.model.FieldMapping;
 import com.taekwang.proxy.registry.InterfaceDefinition.ReturnTableMapping;
 import com.taekwang.proxy.registry.InterfaceDefinition.ExportMapping;
 import com.taekwang.proxy.registry.InterfaceDefinition.ImportMapping;
 import com.taekwang.proxy.registry.InterfaceDefinition.TableMapping;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +23,10 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MappingEngine {
+
+    private final RequestContext requestContext;
     /**
      * WEB 데이터 → SAP RFC Import 파라미터 매핑
      *
@@ -65,24 +71,44 @@ public class MappingEngine {
      */
     @SuppressWarnings("unchecked")
     public Map<String, List<Map<String, Object>>> mapTables(Map<String, Object> webData, List<TableMapping> mappings) {
+        String interfaceId = requestContext.getInterfaceId();
         Map<String, List<Map<String, Object>>> tables = new HashMap<>();
 
         if (mappings == null || mappings.isEmpty()) {
             return tables;
         }
 
-        for (TableMapping mapping : mappings) {
-            Object webValue = webData.get(mapping.getWebField());
+        for (TableMapping tableMapping : mappings) {
+            Object webValue = webData.get(tableMapping.getWebField());
 
             if (webValue == null) {
+                if (tableMapping.isRequired()) {
+                    throw new InterfaceMappingException(
+                            interfaceId,
+                            "Required table missing: WEB = "
+                                    + tableMapping.getWebField()
+                                    + ", SAP = " + tableMapping.getSapTable()
+                    );
+                }
                 continue;
             }
 
             List<Map<String, Object>> tableRows = new ArrayList<>();
-            if (mapping.isSingleValue()) {
+
+            // field NPE 방어
+            if (tableMapping.getFields() == null || tableMapping.getFields().isEmpty()) {
+                throw new InterfaceMappingException(
+                        interfaceId,
+                        "No fields configured for table mapping: WEB = "
+                                + tableMapping.getWebField()
+                                + ", SAP = " + tableMapping.getSapTable()
+                );
+            }
+
+            if (tableMapping.isSingleValue()) {
                 Map<String, Object> row = new HashMap<>();
 
-                for (FieldMapping fieldMapping : mapping.getFields()) {
+                for (FieldMapping fieldMapping : tableMapping.getFields()) {
                     Object value = null;
 
                     if (webValue instanceof Map<?, ?>) {
@@ -95,6 +121,14 @@ public class MappingEngine {
                         value = fieldMapping.getDefaultValue();
                     }
 
+                    if (value == null && fieldMapping.isRequired()) {
+                        throw new InterfaceMappingException(
+                                interfaceId,
+                                "Required field missing: "
+                                        + tableMapping.getWebField() + "." + fieldMapping.getWebField()
+                        );
+                    }
+
                     if (value != null) {
                         row.put(fieldMapping.getSapField(), value);
                     }
@@ -103,11 +137,11 @@ public class MappingEngine {
                 tableRows.add(row);
 
                 log.trace("Mapped single value to table: {} -> {} = {}",
-                        mapping.getWebField(), mapping.getSapTable(), webValue);
+                        tableMapping.getWebField(), tableMapping.getSapTable(), webValue);
             }
             else {
                 if (!(webValue instanceof List)) {
-                    throw new IllegalArgumentException("Field must be array: " + mapping.getWebField());
+                    throw new InterfaceMappingException(interfaceId, "Field must be array: " + tableMapping.getWebField());
                 }
 
                 List<Map<String, Object>> rows = (List<Map<String, Object>>) webValue;
@@ -115,12 +149,19 @@ public class MappingEngine {
                 for (Map<String, Object> webRow : rows) {
                     Map<String, Object> sapRow = new HashMap<>();
 
-                    for (FieldMapping fieldMapping : mapping.getFields()) {
+                    for (FieldMapping fieldMapping : tableMapping.getFields()) {
                         Object value = webRow.get(fieldMapping.getWebField());
 
-                        // 기본값 처리
                         if (value == null && fieldMapping.getDefaultValue() != null) {
                             value = fieldMapping.getDefaultValue();
+                        }
+
+                        if (value == null && fieldMapping.isRequired()) {
+                            throw new InterfaceMappingException(
+                                    interfaceId,
+                                    "Required field missing: "
+                                            + tableMapping.getWebField() + "[]." + fieldMapping.getWebField()
+                            );
                         }
 
                         if (value != null) {
@@ -131,10 +172,10 @@ public class MappingEngine {
                     tableRows.add(sapRow);
                 }
 
-                log.trace("Mapped table: {} -> {} ({} rows)", mapping.getWebField(), mapping.getSapTable(), rows.size());
+                log.trace("Mapped table: {} -> {} ({} rows)", tableMapping.getWebField(), tableMapping.getSapTable(), rows.size());
             }
 
-            tables.put(mapping.getSapTable(), tableRows);
+            tables.put(tableMapping.getSapTable(), tableRows);
         }
 
         return tables;
@@ -196,7 +237,6 @@ public class MappingEngine {
             List<Map<String, Object>> webRows = new ArrayList<>();
 
             for (Map<String, Object> sapRow : sapTable) {
-
                 Map<String, Object> webRow = new HashMap<>();
 
                 for (FieldMapping fieldMapping : mapping.getFields()) {
