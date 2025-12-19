@@ -40,5 +40,5 @@ interface:
 logging:
   level:
     root: INFO
-    com.taekwang.proxy: DEBUG
+    com.prototype.proxy: DEBUG
     com.sap.conn.jco: DEBUG
