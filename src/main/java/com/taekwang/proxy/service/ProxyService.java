@@ -1,16 +1,17 @@
 package com.taekwang.proxy.service;
 
+import com.taekwang.proxy.exception.ProxyException;
 import com.taekwang.proxy.logging.LoggingService;
 import com.taekwang.proxy.model.SimpleProxyRequest;
 import com.taekwang.proxy.model.SimpleProxyResponse;
 import com.taekwang.proxy.registry.InterfaceDefinition;
-import com.taekwang.proxy.registry.InterfaceDefinition.*;
+import com.taekwang.proxy.registry.InterfaceDefinition.ExportMapping;
+import com.taekwang.proxy.registry.InterfaceDefinition.ReturnTableMapping;
 import com.taekwang.proxy.registry.InterfaceRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,13 +82,11 @@ public class ProxyService {
 
             long executionTime = System.currentTimeMillis() - startTime;
 
-            SimpleProxyResponse response = SimpleProxyResponse.builder()
-                    .success(true)
-                    .data(responseData)
-                    .requestId(request.getRequestId())
-                    .timestamp(LocalDateTime.now())
-                    .executionTimeMs(executionTime)
-                    .build();
+            SimpleProxyResponse response = SimpleProxyResponse.success(
+                    responseData,
+                    request.getRequestId(),
+                    executionTime
+            );
 
             loggingService.logResponse(request, response, definition);
             log.info("Request {} completed in {}ms", request.getRequestId(), executionTime);
@@ -99,14 +98,7 @@ public class ProxyService {
             // 에러 로깅
             loggingService.logError(request, e);
 
-            SimpleProxyResponse errorResponse = SimpleProxyResponse.builder()
-                    .success(false)
-                    .message(e.getMessage())
-                    .requestId(request.getRequestId())
-                    .timestamp(LocalDateTime.now())
-                    .build();
-
-            return errorResponse;
+            throw new ProxyException(e.getMessage(), e, request.getRequestId());
         }
     }
 

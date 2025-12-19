@@ -17,19 +17,26 @@ public record SimpleProxyResponse(
         LocalDateTime timestamp,
         Long executionTimeMs
 ) {
-    public static SimpleProxyResponse success(Map<String, Object> data) {
+    public static SimpleProxyResponse success(Map<String, Object> data, String requestId, Long executionTimeMs) {
         return SimpleProxyResponse.builder()
                 .success(true)
                 .data(data)
+                .requestId(requestId)
+                .executionTimeMs(executionTimeMs)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static SimpleProxyResponse error(String message, String requestId) {
+        return SimpleProxyResponse.builder()
+                .success(false)
+                .message(message)
+                .requestId(requestId)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
     public static SimpleProxyResponse error(String message) {
-        return SimpleProxyResponse.builder()
-                .success(false)
-                .message(message)
-                .timestamp(LocalDateTime.now())
-                .build();
+        return error(message, null);
     }
 }
