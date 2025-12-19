@@ -9,7 +9,7 @@ import java.util.Map;
  * Proxy 서버에서 WEB으로 반환하는 응답 구조
  */
 @Builder
-public record SimpleProxyResponse(
+public record SimpleProxyResponse (
         boolean success,
         String message,
         Map<String, Object> data,
@@ -32,6 +32,16 @@ public record SimpleProxyResponse(
                 .success(false)
                 .message(message)
                 .requestId(requestId)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static SimpleProxyResponse error(String message, String requestId, Map<String, Object> data) {
+        return SimpleProxyResponse.builder()
+                .success(false)
+                .message(message)
+                .requestId(requestId)
+                .data(data)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

@@ -72,7 +72,6 @@ public class RfcExecutor {
                     continue;
                 }
 
-                // 타입에 따라 설정
                 if (value instanceof String) {
                     importList.setValue(paramName, (String) value);
                 } else if (value instanceof Integer) {

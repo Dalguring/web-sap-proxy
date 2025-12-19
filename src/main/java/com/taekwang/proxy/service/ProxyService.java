@@ -1,5 +1,6 @@
 package com.taekwang.proxy.service;
 
+import com.taekwang.proxy.context.RequestContext;
 import com.taekwang.proxy.exception.ProxyException;
 import com.taekwang.proxy.logging.LoggingService;
 import com.taekwang.proxy.model.SimpleProxyRequest;
@@ -24,12 +25,15 @@ public class ProxyService {
     private final MappingEngine mappingEngine;
     private final LoggingService loggingService;
     private final RfcExecutor rfcExecutor;
+    private final RequestContext requestContext;
 
     /**
      * Proxy 요청 실행
      */
     public SimpleProxyResponse execute(SimpleProxyRequest request) {
         long startTime = System.currentTimeMillis();
+        // InterfaceId 전역 저장
+        requestContext.setInterfaceId(request.getInterfaceId());
 
         try {
             InterfaceDefinition definition = registry.get(request.getInterfaceId());
@@ -44,8 +48,8 @@ public class ProxyService {
             );
 
             Map<String, List<Map<String, Object>>> tables = mappingEngine.mapTables(
-                request.getData(),
-                definition.getTableMapping()
+                    request.getData(),
+                    definition.getTableMapping()
             );
 
             log.debug("Mapped import params: {}", importParams);
@@ -95,7 +99,6 @@ public class ProxyService {
         } catch (Exception e) {
             log.error("Request {} failed", request.getRequestId(), e);
 
-            // 에러 로깅
             loggingService.logError(request, e);
 
             throw new ProxyException(e.getMessage(), e, request.getRequestId());
