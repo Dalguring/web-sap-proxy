@@ -60,6 +60,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<SimpleProxyResponse> handleNotFoundException(NotFoundException ex) {
+        String requestId = requestContext.getRequestId();
+
+        log.warn("Resource not found. requestId={}, resource={}, message={}", requestId, ex.getResource(), ex.getMessage());
+
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+                ex.getMessage(),
+                requestId,
+                Map.of("interfaceId", ex.getResource(), "errorType", "NOT_FOUND")
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<SimpleProxyResponse> handleIllegalArgumentException(
             IllegalArgumentException ex) {

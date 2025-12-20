@@ -1,5 +1,6 @@
 package com.prototype.proxy.service;
 
+import com.prototype.proxy.exception.NotFoundException;
 import com.sap.conn.jco.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class RfcExecutor {
 
         JCoFunction function = destination.getRepository().getFunction(functionName);
         if (function == null) {
-            throw new IllegalArgumentException("RFC function not found: " + functionName);
+            throw new NotFoundException(functionName, "RFC function not found: " + functionName);
         }
 
         if (importParams != null && !importParams.isEmpty()) {
