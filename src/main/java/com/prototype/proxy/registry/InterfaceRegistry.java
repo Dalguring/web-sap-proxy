@@ -1,6 +1,7 @@
 package com.prototype.proxy.registry;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.prototype.proxy.exception.NotFoundException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -79,7 +80,7 @@ public class InterfaceRegistry {
     public InterfaceDefinition get(String interfaceId) {
         InterfaceDefinition definition = registry.get(interfaceId);
         if (definition == null) {
-            throw new IllegalArgumentException("Interface definition not found: " + interfaceId);
+            throw new NotFoundException(interfaceId, "Interface definition not found: " + interfaceId);
         }
         return definition;
     }
