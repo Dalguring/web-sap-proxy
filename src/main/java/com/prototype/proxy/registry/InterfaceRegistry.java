@@ -43,7 +43,6 @@ public class InterfaceRegistry {
             }
 
             log.info("Loaded {} interface definitions: {}", registry.size(), registry.keySet());
-
         } catch (IOException e) {
             log.error("Failed to load interface definitions", e);
             throw new RuntimeException("Failed to load interface definitions", e);
@@ -70,7 +69,6 @@ public class InterfaceRegistry {
             );
 
             registry.put(definition.getId(), definition);
-
             log.debug("Loaded interface: {} from {}", definition.getId(), resource.getFilename());
         } catch (IOException e) {
             log.error("Failed to load definition from: {}", resource.getFilename(), e);
@@ -78,10 +76,11 @@ public class InterfaceRegistry {
     }
 
     public InterfaceDefinition get(String interfaceId) {
-        InterfaceDefinition definition = registry.get(interfaceId);
+        InterfaceDefinition definition = registry.get(interfaceId.toUpperCase());
         if (definition == null) {
             throw new NotFoundException(interfaceId, "Interface definition not found: " + interfaceId);
         }
+
         return definition;
     }
 
@@ -96,6 +95,6 @@ public class InterfaceRegistry {
     }
 
     public boolean exists(String interfaceId) {
-        return registry.containsKey(interfaceId);
+        return registry.containsKey(interfaceId.toUpperCase());
     }
 }
