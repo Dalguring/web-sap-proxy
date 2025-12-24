@@ -33,19 +33,17 @@ public class ProxyService {
         long startTime = System.currentTimeMillis();
         // InterfaceId 전역 저장
         requestContext.setInterfaceId(request.getInterfaceId());
+        loggingService.logRequest(request);
 
         try {
             InterfaceDefinition definition = registry.get(request.getInterfaceId());
 
             log.info("Executing interface: {} (RFC: {})", definition.getId(), definition.getRfcFunction());
 
-            loggingService.logRequest(request, definition);
-
             Map<String, Object> importParams = mappingEngine.mapImportParameters(
                     request.getData(),
                     definition.getImportMapping()
             );
-
             Map<String, List<Map<String, Object>>> tables = mappingEngine.mapTables(
                     request.getData(),
                     definition.getTableMapping()
@@ -96,12 +94,11 @@ public class ProxyService {
 
             return response;
         } catch (NotFoundException e) {
+            loggingService.logError(request, e);
             throw e;
         } catch (Exception e) {
             log.error("Request {} failed", request.getRequestId(), e);
-
             loggingService.logError(request, e);
-
             throw new ProxyException(e.getMessage(), e, request.getRequestId());
         }
     }

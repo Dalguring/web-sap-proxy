@@ -3,8 +3,8 @@ package com.prototype.proxy.logging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prototype.proxy.model.SimpleProxyRequest;
-import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.model.SimpleProxyResponse;
+import com.prototype.proxy.registry.InterfaceDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,25 +23,15 @@ public class LoggingService {
     private final ObjectMapper objectMapper;
 
     @Transactional
+    public void logRequest(SimpleProxyRequest request) {
+        this.logRequest(request, null);
+    }
+
+    @Transactional
     public void logRequest(SimpleProxyRequest request, InterfaceDefinition definition) {
-        try {
-            String requestDataJson = objectMapper.writeValueAsString(request.getData());
-
-            ProxyLog logEntity = ProxyLog.builder()
-                    .requestId(request.getRequestId())
-                    .interfaceId(request.getInterfaceId())
-                    .rfcFunction(definition.getRfcFunction())
-                    .userId(request.getUserId())
-                    .requestData(requestDataJson)
-                    .success(null)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            logRepository.save(logEntity);
-            log.debug("Request logged: {}", request.getRequestId());
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize request data", e);
-        }
+        ProxyLog logEntity = createInitialLog(request, definition);
+        logRepository.save(logEntity);
+        log.debug("Request logged: {}", request.getRequestId());
     }
 
     /**
@@ -49,37 +39,21 @@ public class LoggingService {
      */
     @Transactional
     public void logResponse(SimpleProxyRequest request, SimpleProxyResponse response, InterfaceDefinition definition) {
-        try {
-            ProxyLog logEntity = logRepository.findByRequestId(request.getRequestId());
+        ProxyLog logEntity = getOrCreateLog(request, definition);
 
-            if (logEntity == null) {
-                String requestDataJson = objectMapper.writeValueAsString(request.getData());
-                logEntity = ProxyLog.builder()
-                        .requestId(request.getRequestId())
-                        .interfaceId(request.getInterfaceId())
-                        .rfcFunction(definition.getRfcFunction())
-                        .userId(request.getUserId())
-                        .requestData(requestDataJson)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-            }
-
-            String responseDataJson = objectMapper.writeValueAsString(response.data());
-
-            logEntity.setResponseData(responseDataJson);
-            logEntity.setSuccess(response.success());
-            logEntity.setExecutionTimeMs(response.executionTimeMs());
-
-            if (!response.success() && response.message() != null) {
-                logEntity.setErrorMessage(response.message());
-            }
-
-            logRepository.save(logEntity);
-            log.debug("Response logged: {}", request.getRequestId());
-
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize response data", e);
+        if (definition != null) {
+            logEntity.setRfcFunction(definition.getRfcFunction());
         }
+
+        logEntity.setResponseData(toJson(response.data()));
+        logEntity.setSuccess(response.success());
+        logEntity.setExecutionTimeMs(response.executionTimeMs());
+
+        if (!response.success()) {
+            logEntity.setErrorMessage(response.message());
+        }
+
+        logRepository.save(logEntity);
     }
 
     /**
@@ -87,28 +61,42 @@ public class LoggingService {
      */
     @Transactional
     public void logError(SimpleProxyRequest request, Exception error) {
+        ProxyLog logEntity = getOrCreateLog(request, null);
+
+        logEntity.setSuccess(false);
+        logEntity.setErrorMessage(error.getMessage());
+
+        logRepository.save(logEntity);
+    }
+
+    private ProxyLog getOrCreateLog(SimpleProxyRequest request, InterfaceDefinition definition) {
+        ProxyLog logEntity = logRepository.findByRequestId(request.getRequestId());
+
+        if (logEntity == null) {
+            log.debug("No existing log found for requestId: {}, creating new one", request.getRequestId());
+            return createInitialLog(request, definition);
+        }
+
+        return logEntity;
+    }
+
+    private ProxyLog createInitialLog(SimpleProxyRequest request, InterfaceDefinition definition) {
+        return ProxyLog.builder()
+                .requestId(request.getRequestId())
+                .interfaceId(request.getInterfaceId())
+                .rfcFunction(definition != null ? definition.getRfcFunction() : null)
+                .userId(request.getUserId())
+                .requestData(toJson(request.getData()))
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private String toJson(Object obj) {
         try {
-            ProxyLog logEntity = logRepository.findByRequestId(request.getRequestId());
-
-            if (logEntity == null) {
-                String requestDataJson = objectMapper.writeValueAsString(request.getData());
-                logEntity = ProxyLog.builder()
-                        .requestId(request.getRequestId())
-                        .interfaceId(request.getInterfaceId())
-                        .userId(request.getUserId())
-                        .requestData(requestDataJson)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-            }
-
-            logEntity.setSuccess(false);
-            logEntity.setErrorMessage(error.getMessage());
-
-            logRepository.save(logEntity);
-            log.debug("Error logged: {}", request.getRequestId());
-
+            return objectMapper.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
-            log.error("Failed to serialize request data", e);
+            log.error("JSON serialization failed", e);
+            return "{\"error\": \"Serialization failed\"}";
         }
     }
 }
