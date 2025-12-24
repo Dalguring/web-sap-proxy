@@ -23,15 +23,16 @@ public class InterfaceDefinition {
     @Data
     public static class ImportMapping {
         private String webField;
-        private String sapParam;
+        private String sapField;
         private String type;
         private boolean required;
+        private int size;
         private String defaultValue;
     }
 
     @Data
     public static class TableMapping {
-        private String webField;
+        private String webFields;
         private String sapTable;
         private boolean singleValue;
         private boolean required;

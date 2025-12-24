@@ -11,5 +11,6 @@ public class FieldMapping {
     private String sapField;
     private String type;
     private boolean required;
+    private int size;
     private String defaultValue;
 }

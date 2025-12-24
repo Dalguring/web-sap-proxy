@@ -1,6 +1,7 @@
 package com.prototype.proxy.service;
 
 import com.prototype.proxy.context.RequestContext;
+import com.prototype.proxy.exception.InterfaceMappingException;
 import com.prototype.proxy.exception.NotFoundException;
 import com.prototype.proxy.exception.ProxyException;
 import com.prototype.proxy.model.SimpleProxyRequest;
@@ -95,8 +96,8 @@ public class ProxyService {
             log.info("Request {} completed in {}ms", request.getRequestId(), executionTime);
 
             return response;
-        } catch (NotFoundException e) {
-            loggingService.logError(request, e);
+        } catch (NotFoundException | InterfaceMappingException e) {
+            loggingService.logError(request, e, definition);
             throw e;
         } catch (Exception e) {
             log.error("Request {} failed", request.getRequestId(), e);
