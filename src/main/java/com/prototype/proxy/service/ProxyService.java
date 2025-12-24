@@ -35,8 +35,10 @@ public class ProxyService {
         requestContext.setInterfaceId(request.getInterfaceId());
         loggingService.logRequest(request);
 
+        InterfaceDefinition definition = null;
+
         try {
-            InterfaceDefinition definition = registry.get(request.getInterfaceId());
+            definition = registry.get(request.getInterfaceId());
 
             log.info("Executing interface: {} (RFC: {})", definition.getId(), definition.getRfcFunction());
 
@@ -98,7 +100,8 @@ public class ProxyService {
             throw e;
         } catch (Exception e) {
             log.error("Request {} failed", request.getRequestId(), e);
-            loggingService.logError(request, e);
+            loggingService.logError(request, e, definition);
+
             throw new ProxyException(e.getMessage(), e, request.getRequestId());
         }
     }

@@ -61,7 +61,16 @@ public class LoggingService {
      */
     @Transactional
     public void logError(SimpleProxyRequest request, Exception error) {
-        ProxyLog logEntity = getOrCreateLog(request, null);
+        this.logError(request, error, null);
+    }
+
+    @Transactional
+    public void logError(SimpleProxyRequest request, Exception error, InterfaceDefinition definition) {
+        ProxyLog logEntity = getOrCreateLog(request, definition);
+
+        if (definition != null && logEntity.getRfcFunction() == null) {
+            logEntity.setRfcFunction(definition.getRfcFunction());
+        }
 
         logEntity.setSuccess(false);
         logEntity.setErrorMessage(error.getMessage());
