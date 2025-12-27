@@ -36,6 +36,16 @@ server:
 interface:
   definition-path: classpath:interfaces/
 
+springdoc:
+  packages-to-scan: com.prototype.proxy.model, com.prototype.proxy.controller
+  swagger-ui:
+    path: /swagger
+    groups-order: desc
+    operations-sorter: method
+    default-models-expand-depth: -1
+  api-docs:
+    path: /api-docs
+
 # 로깅 레벨
 logging:
   level:
