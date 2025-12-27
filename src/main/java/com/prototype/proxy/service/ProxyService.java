@@ -1,6 +1,8 @@
 package com.prototype.proxy.service;
 
 import com.prototype.proxy.context.RequestContext;
+import com.prototype.proxy.exception.InterfaceMappingException;
+import com.prototype.proxy.exception.NotFoundException;
 import com.prototype.proxy.exception.ProxyException;
 import com.prototype.proxy.model.SimpleProxyRequest;
 import com.prototype.proxy.registry.InterfaceDefinition;
@@ -32,19 +34,19 @@ public class ProxyService {
         long startTime = System.currentTimeMillis();
         // InterfaceId 전역 저장
         requestContext.setInterfaceId(request.getInterfaceId());
+        loggingService.logRequest(request);
+
+        InterfaceDefinition definition = null;
 
         try {
-            InterfaceDefinition definition = registry.get(request.getInterfaceId());
+            definition = registry.get(request.getInterfaceId());
 
             log.info("Executing interface: {} (RFC: {})", definition.getId(), definition.getRfcFunction());
 
-            loggingService.logRequest(request, definition);
-
             Map<String, Object> importParams = mappingEngine.mapImportParameters(
-                request.getData(),
-                definition.getImportMapping()
+                    request.getData(),
+                    definition.getImportMapping()
             );
-
             Map<String, List<Map<String, Object>>> tables = mappingEngine.mapTables(
                     request.getData(),
                     definition.getTableMapping()
@@ -52,15 +54,15 @@ public class ProxyService {
 
             log.debug("Mapped import params: {}", importParams);
             log.debug("Mapped tables: {}", tables.keySet());
-            
+
             // Mock 데이터 생성
 //            Map<String, Object> mockSapExport = createMockExportData(definition);
 //            Map<String, List<Map<String, Object>>> mockSapTables = createMockTableData(definition);
 
             Map<String, Object> rfcResult = rfcExecutor.execute(
-                definition.getRfcFunction(),
-                importParams,
-                tables
+                    definition.getRfcFunction(),
+                    importParams,
+                    tables
             );
 
             @SuppressWarnings("unchecked")
@@ -73,8 +75,8 @@ public class ProxyService {
             Map<String, Object> responseData = new HashMap<>();
 
             responseData.putAll(mappingEngine.mapExportParameters(
-                sapExport,
-                definition.getExportMapping()
+                    sapExport,
+                    definition.getExportMapping()
             ));
 
             responseData.putAll(mappingEngine.mapReturnTables(
@@ -94,10 +96,12 @@ public class ProxyService {
             log.info("Request {} completed in {}ms", request.getRequestId(), executionTime);
 
             return response;
+        } catch (NotFoundException | InterfaceMappingException e) {
+            loggingService.logError(request, e, definition);
+            throw e;
         } catch (Exception e) {
             log.error("Request {} failed", request.getRequestId(), e);
-
-            loggingService.logError(request, e);
+            loggingService.logError(request, e, definition);
 
             throw new ProxyException(e.getMessage(), e, request.getRequestId());
         }
