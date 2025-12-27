@@ -2,7 +2,7 @@ package com.prototype.proxy.service;
 
 import com.prototype.proxy.context.RequestContext;
 import com.prototype.proxy.exception.InterfaceMappingException;
-import com.prototype.proxy.model.FieldMapping;
+import com.prototype.proxy.registry.InterfaceDefinition.FieldMapping;
 import com.prototype.proxy.registry.InterfaceDefinition.ReturnTableMapping;
 import com.prototype.proxy.registry.InterfaceDefinition.ExportMapping;
 import com.prototype.proxy.registry.InterfaceDefinition.ImportMapping;
