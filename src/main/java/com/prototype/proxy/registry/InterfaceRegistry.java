@@ -14,8 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 인터페이스 정의 관리 Registry
- * 애플리케이션 시작 시 YAML 파일들을 로드하여 메모리에 보관
+ * 인터페이스 정의 관리 Registry <br/>애플리케이션 시작 시 YAML 파일들을 로드하여 메모리에 보관
  */
 
 @Slf4j
@@ -52,8 +51,8 @@ public class InterfaceRegistry {
     private void loadDefinition(Resource resource) {
         try {
             Map<String, Object> yaml = yamlMapper.readValue(
-                    resource.getInputStream(),
-                    Map.class
+                resource.getInputStream(),
+                Map.class
             );
 
             Map<String, Object> interfaceData = (Map<String, Object>) yaml.get("interface");
@@ -64,8 +63,8 @@ public class InterfaceRegistry {
             }
 
             InterfaceDefinition definition = yamlMapper.convertValue(
-                    interfaceData,
-                    InterfaceDefinition.class
+                interfaceData,
+                InterfaceDefinition.class
             );
 
             registry.put(definition.getId(), definition);

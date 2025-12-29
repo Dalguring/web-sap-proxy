@@ -18,10 +18,10 @@ public class SwaggerConfig {
         devServer.setDescription("dev");
 
         return new OpenAPI()
-                .info(new Info()
-                        .title("Interface Proxy API")
-                        .version("v1")
-                        .description("SAP RFC 호출을 위한 인터페이스 프록시 서버 API 문서"))
-                .servers(List.of(devServer));
+            .info(new Info()
+                .title("Interface Proxy API")
+                .version("v1")
+                .description("SAP RFC 호출을 위한 인터페이스 프록시 서버 API 문서"))
+            .servers(List.of(devServer));
     }
 }

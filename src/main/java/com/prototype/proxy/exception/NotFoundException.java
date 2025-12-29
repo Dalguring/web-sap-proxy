@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class NotFoundException extends RuntimeException {
+
     private final String resource;
 
     public NotFoundException(String resource, String message) {

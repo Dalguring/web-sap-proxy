@@ -11,6 +11,7 @@ import java.util.List;
  */
 @Repository
 public interface ProxyLogRepository extends JpaRepository<ProxyLog, Long> {
+
     /**
      * Request ID로 조회
      */
@@ -30,7 +31,7 @@ public interface ProxyLogRepository extends JpaRepository<ProxyLog, Long> {
      * 기간별 조회
      */
     List<ProxyLog> findByCreatedAtBetweenOrderByCreatedAtDesc(
-            LocalDateTime startDate,
-            LocalDateTime endDate
+        LocalDateTime startDate,
+        LocalDateTime endDate
     );
 }

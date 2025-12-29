@@ -21,6 +21,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class ProxyService {
+
     private final InterfaceRegistry registry;
     private final MappingEngine mappingEngine;
     private final LoggingService loggingService;
@@ -44,12 +45,12 @@ public class ProxyService {
             log.info("Executing interface: {} (RFC: {})", definition.getId(), definition.getRfcFunction());
 
             Map<String, Object> importParams = mappingEngine.mapImportParameters(
-                    request.getData(),
-                    definition.getImportMapping()
+                request.getData(),
+                definition.getImportMapping()
             );
             Map<String, List<Map<String, Object>>> tables = mappingEngine.mapTables(
-                    request.getData(),
-                    definition.getTableMapping()
+                request.getData(),
+                definition.getTableMapping()
             );
 
             log.debug("Mapped import params: {}", importParams);
@@ -60,9 +61,9 @@ public class ProxyService {
 //            Map<String, List<Map<String, Object>>> mockSapTables = createMockTableData(definition);
 
             Map<String, Object> rfcResult = rfcExecutor.execute(
-                    definition.getRfcFunction(),
-                    importParams,
-                    tables
+                definition.getRfcFunction(),
+                importParams,
+                tables
             );
 
             @SuppressWarnings("unchecked")
@@ -70,26 +71,26 @@ public class ProxyService {
 
             @SuppressWarnings("unchecked")
             Map<String, List<Map<String, Object>>> sapTables =
-                    (Map<String, List<Map<String, Object>>>) rfcResult.get("returnTables");
+                (Map<String, List<Map<String, Object>>>) rfcResult.get("returnTables");
 
             Map<String, Object> responseData = new HashMap<>();
 
             responseData.putAll(mappingEngine.mapExportParameters(
-                    sapExport,
-                    definition.getExportMapping()
+                sapExport,
+                definition.getExportMapping()
             ));
 
             responseData.putAll(mappingEngine.mapReturnTables(
-                    sapTables,
-                    definition.getReturnTableMapping()
+                sapTables,
+                definition.getReturnTableMapping()
             ));
 
             long executionTime = System.currentTimeMillis() - startTime;
 
             SimpleProxyResponse response = SimpleProxyResponse.success(
-                    responseData,
-                    request.getRequestId(),
-                    executionTime
+                responseData,
+                request.getRequestId(),
+                executionTime
             );
 
             loggingService.logResponse(request, response, definition);

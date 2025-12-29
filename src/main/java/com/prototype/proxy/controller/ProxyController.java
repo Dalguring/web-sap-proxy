@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/proxy")
 @RequiredArgsConstructor
 public class ProxyController {
+
     private final InterfaceRegistry registry;
     private final ProxyService proxyService;
     private final RequestContext requestContext;
@@ -72,18 +73,18 @@ public class ProxyController {
     public ResponseEntity<Map<String, Object>> listInterfaces() {
         Map<String, Object> response = new HashMap<>();
         Map<String, Map<String, String>> interfaces = registry.getAllDefinitions()
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> {
-                            Map<String, String> info = new HashMap<>();
-                            info.put("name", e.getValue().getName());
-                            info.put("description", e.getValue().getDescription());
-                            info.put("rfcFunction", e.getValue().getRfcFunction());
-                            return info;
-                        }
-                ));
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> {
+                    Map<String, String> info = new HashMap<>();
+                    info.put("name", e.getValue().getName());
+                    info.put("description", e.getValue().getDescription());
+                    info.put("rfcFunction", e.getValue().getRfcFunction());
+                    return info;
+                }
+            ));
 
         response.put("count", interfaces.size());
         response.put("interfaces", interfaces);

@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class LoggingService {
+
     private final ProxyLogRepository logRepository;
     private final ObjectMapper objectMapper;
 
@@ -91,13 +92,13 @@ public class LoggingService {
 
     private ProxyLog createInitialLog(SimpleProxyRequest request, InterfaceDefinition definition) {
         return ProxyLog.builder()
-                .requestId(request.getRequestId())
-                .interfaceId(request.getInterfaceId())
-                .rfcFunction(definition != null ? definition.getRfcFunction() : null)
-                .userId(request.getUserId())
-                .requestData(toJson(request.getData()))
-                .createdAt(LocalDateTime.now())
-                .build();
+            .requestId(request.getRequestId())
+            .interfaceId(request.getInterfaceId())
+            .rfcFunction(definition != null ? definition.getRfcFunction() : null)
+            .userId(request.getUserId())
+            .requestData(toJson(request.getData()))
+            .createdAt(LocalDateTime.now())
+            .build();
     }
 
     private String toJson(Object obj) {

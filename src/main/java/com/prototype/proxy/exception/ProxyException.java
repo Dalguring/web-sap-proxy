@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class ProxyException extends RuntimeException {
+
     private String errorCode;
     private String requestId;
 

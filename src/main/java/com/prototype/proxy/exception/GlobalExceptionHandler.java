@@ -27,7 +27,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<SimpleProxyResponse> handleNotFoundException(NotFoundException ex) {
         String requestId = requestContext.getRequestId();
-        log.warn("Resource not found. requestId={}, resource={}, message={}", requestId, ex.getResource(), ex.getMessage());
+        log.warn("Resource not found. requestId={}, resource={}, message={}",
+            requestId, ex.getResource(), ex.getMessage());
 
         Map<String, Object> data = new HashMap<>();
         data.put("interfaceId", ex.getResource());
@@ -49,7 +50,9 @@ public class GlobalExceptionHandler {
         data.put("path", path);
         data.put("errorType", "ENDPOINT_NOT_FOUND");
 
-        SimpleProxyResponse response = SimpleProxyResponse.error("The requested endpoint was not found.", requestId, data);
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+            "The requested endpoint was not found.", requestId, data
+        );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
@@ -59,14 +62,16 @@ public class GlobalExceptionHandler {
         String requestId = requestContext.getRequestId();
 
         log.warn("Method not allowed. requestId={}, method={}, supported={}",
-                requestId, ex.getMethod(), ex.getSupportedHttpMethods());
+            requestId, ex.getMethod(), ex.getSupportedHttpMethods());
 
         Map<String, Object> data = new HashMap<>();
         data.put("method", ex.getMethod());
         data.put("supportedMethods", ex.getSupportedHttpMethods());
         data.put("errorType", "METHOD_NOT_ALLOWED");
 
-        SimpleProxyResponse response = SimpleProxyResponse.error("Method not allowed: " + ex.getMethod(), requestId, data);
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+            "Method not allowed: " + ex.getMethod(), requestId, data
+        );
 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
@@ -76,13 +81,15 @@ public class GlobalExceptionHandler {
         String requestId = requestContext.getRequestId();
 
         log.warn("Mapping validation failed. requestId={}, interfaceId={}, message={}",
-                requestId, ex.getInterfaceId(), ex.getMessage());
+            requestId, ex.getInterfaceId(), ex.getMessage());
 
         Map<String, Object> data = new HashMap<>();
         data.put("interfaceId", ex.getInterfaceId());
         data.put("errorType", "MAPPING_VALIDATION");
 
-        SimpleProxyResponse response = SimpleProxyResponse.error("Mapping validation failed: " + ex.getMessage(), requestId, data);
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+            "Mapping validation failed: " + ex.getMessage(), requestId, data
+        );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -108,8 +115,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<SimpleProxyResponse> handleIllegalArgumentException(
-            IllegalArgumentException ex) {
+    public ResponseEntity<SimpleProxyResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         String requestId = requestContext.getRequestId();
 
         log.warn("Bad request. requestId={}, message={}", requestId, ex.getMessage());
@@ -147,7 +153,9 @@ public class GlobalExceptionHandler {
         data.put("errorType", "INTERNAL_SERVER_ERROR");
         data.put("exceptionType", ex.getClass().getSimpleName());
 
-        SimpleProxyResponse response = SimpleProxyResponse.error("Internal server error: " + ex.getMessage(), requestId, data);
+        SimpleProxyResponse response = SimpleProxyResponse.error(
+            "Internal server error: " + ex.getMessage(), requestId, data
+        );
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

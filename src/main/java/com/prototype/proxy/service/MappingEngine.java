@@ -27,11 +27,13 @@ public class MappingEngine {
     /**
      * 공통 값 검증 메서드
      */
-    private Object validate(String field, Object value, boolean required, int size, String defaultValue) {
+    private Object validate(String field, Object value, boolean required, int size,
+        String defaultValue) {
         String interfaceId = requestContext.getInterfaceId();
 
         if (size <= 0) {
-            throw new InterfaceMappingException(interfaceId, "Size configuration missing for: " + field);
+            throw new InterfaceMappingException(interfaceId,
+                "Size configuration missing for: " + field);
         }
 
         if (ObjectUtils.isEmpty(value) && defaultValue != null) {
@@ -40,15 +42,16 @@ public class MappingEngine {
 
         if (ObjectUtils.isEmpty(value)) {
             if (required) {
-                throw new InterfaceMappingException(interfaceId, "Required field missing: " + field);
+                throw new InterfaceMappingException(interfaceId,
+                    "Required field missing: " + field);
             }
             return defaultValue;
         }
 
         if (String.valueOf(value).length() > size) {
             throw new InterfaceMappingException(interfaceId,
-                    String.format("Size exceeded, field: %s (Max: %d, Actual: %d)",
-                            field, size, String.valueOf(value).length()));
+                String.format("Size exceeded, field: %s (Max: %d, Actual: %d)",
+                    field, size, String.valueOf(value).length()));
         }
 
         return value;
@@ -61,7 +64,8 @@ public class MappingEngine {
      * @param mappings Import 매핑 정의
      * @return 매핑된 Import 파라미터
      */
-    public Map<String, Object> mapImportParameters(Map<String, Object> webData, List<ImportMapping> mappings) {
+    public Map<String, Object> mapImportParameters(Map<String, Object> webData,
+        List<ImportMapping> mappings) {
         Map<String, Object> importParams = new HashMap<>();
 
         if (mappings == null || mappings.isEmpty()) {
@@ -70,11 +74,11 @@ public class MappingEngine {
 
         for (ImportMapping mapping : mappings) {
             Object value = validate(
-                    mapping.getWebField(),
-                    webData.get(mapping.getWebField()),
-                    mapping.isRequired(),
-                    mapping.getSize(),
-                    mapping.getDefaultValue()
+                mapping.getWebField(),
+                webData.get(mapping.getWebField()),
+                mapping.isRequired(),
+                mapping.getSize(),
+                mapping.getDefaultValue()
             );
 
             if (value != null) {
@@ -86,15 +90,15 @@ public class MappingEngine {
     }
 
     /**
-     * WEB 데이터 → SAP RFC Table 매핑
-     * 단일 값(singleValue=true)과 배열 모두 지원
+     * WEB 데이터 → SAP RFC Table 매핑<br/>단일 값(singleValue=true)과 배열 모두 지원
      *
      * @param webData  WEB에서 전송한 데이터
      * @param mappings Table 매핑 정의
      * @return 매핑된 Table 데이터 (테이블명 → 행 목록)
      */
     @SuppressWarnings("unchecked")
-    public Map<String, List<Map<String, Object>>> mapTables(Map<String, Object> webData, List<TableMapping> mappings) {
+    public Map<String, List<Map<String, Object>>> mapTables(Map<String, Object> webData,
+        List<TableMapping> mappings) {
         Map<String, List<Map<String, Object>>> tables = new HashMap<>();
 
         if (mappings == null || mappings.isEmpty()) {
@@ -108,15 +112,16 @@ public class MappingEngine {
             if (ObjectUtils.isEmpty(webValue)) {
                 if (tableMapping.isRequired()) {
                     throw new InterfaceMappingException(requestContext.getInterfaceId(),
-                            "Required table missing: " + tableMapping.getWebFields());
+                        "Required table missing: " + tableMapping.getWebFields());
                 }
             }
 
             // 필드 매핑 설정 정보가 없는 경우
             if (ObjectUtils.isEmpty(tableMapping.getFields())) {
                 throw new InterfaceMappingException(
-                        requestContext.getInterfaceId(),
-                        "No fields configured for table mapping: SAP table [" + tableMapping.getSapTable() + "]"
+                    requestContext.getInterfaceId(),
+                    "No fields configured for table mapping: SAP table ["
+                        + tableMapping.getSapTable() + "]"
                 );
             }
 
@@ -125,8 +130,11 @@ public class MappingEngine {
             if (tableMapping.isSingleValue()) {
                 if (webValue instanceof List) {
                     throw new InterfaceMappingException(requestContext.getInterfaceId(),
-                            String.format("Expected object for single value field '%s', but received array/list.",
-                                    tableMapping.getWebFields()));
+                        String.format(
+                            "Expected object for single value field '%s', but received array/list.",
+                            tableMapping.getWebFields()
+                        )
+                    );
                 }
                 Map<String, Object> row = new HashMap<>();
 
@@ -140,11 +148,11 @@ public class MappingEngine {
                     }
 
                     Object validatedValue = validate(
-                            tableMapping.getWebFields() + "." + fieldMapping.getWebField(),
-                            rawValue,
-                            fieldMapping.isRequired(),
-                            fieldMapping.getSize(),
-                            fieldMapping.getDefaultValue()
+                        tableMapping.getWebFields() + "." + fieldMapping.getWebField(),
+                        rawValue,
+                        fieldMapping.isRequired(),
+                        fieldMapping.getSize(),
+                        fieldMapping.getDefaultValue()
                     );
 
                     if (validatedValue != null) {
@@ -154,13 +162,15 @@ public class MappingEngine {
 
                 tableRows.add(row);
                 log.trace("Mapped single value to table: {} -> {} = {}",
-                        tableMapping.getWebFields(), tableMapping.getSapTable(), webValue);
-            }
-            else {
+                    tableMapping.getWebFields(), tableMapping.getSapTable(), webValue);
+            } else {
                 if (!(webValue instanceof List)) {
                     throw new InterfaceMappingException(requestContext.getInterfaceId(),
-                            String.format("Expected array/list for multi-row field '%s', but received object/string.",
-                                    tableMapping.getWebFields()));
+                        String.format(
+                            "Expected array/list for multi-row field '%s', but received object/string.",
+                            tableMapping.getWebFields()
+                        )
+                    );
                 }
 
                 List<Map<String, Object>> rows = (List<Map<String, Object>>) webValue;
@@ -172,11 +182,11 @@ public class MappingEngine {
                     for (FieldMapping fieldMapping : tableMapping.getFields()) {
                         Object rawValue = webRow.get(fieldMapping.getWebField());
                         Object validatedValue = validate(
-                                tableMapping.getWebFields() + "[" + i + "]." + fieldMapping.getWebField(),
-                                rawValue,
-                                fieldMapping.isRequired(),
-                                fieldMapping.getSize(),
-                                fieldMapping.getDefaultValue()
+                            tableMapping.getWebFields() + "[" + i + "]." + fieldMapping.getWebField(),
+                            rawValue,
+                            fieldMapping.isRequired(),
+                            fieldMapping.getSize(),
+                            fieldMapping.getDefaultValue()
                         );
 
                         if (validatedValue != null) {
@@ -185,7 +195,8 @@ public class MappingEngine {
                     }
                     tableRows.add(sapRow);
                 }
-                log.trace("Mapped table: {} -> {} ({} rows)", tableMapping.getWebFields(), tableMapping.getSapTable(), rows.size());
+                log.trace("Mapped table: {} -> {} ({} rows)",
+                    tableMapping.getWebFields(), tableMapping.getSapTable(), rows.size());
             }
 
             tables.put(tableMapping.getSapTable(), tableRows);
@@ -212,7 +223,8 @@ public class MappingEngine {
             Object value = exportParams.get(mapping.getSapParam());
             if (!ObjectUtils.isEmpty(value)) {
                 result.put(mapping.getWebField(), value);
-                log.trace("Mapped export: {} -> {} = {}", mapping.getSapParam(), mapping.getWebField(), value);
+                log.trace("Mapped export: {} -> {} = {}",
+                    mapping.getSapParam(), mapping.getWebField(), value);
             }
         }
 

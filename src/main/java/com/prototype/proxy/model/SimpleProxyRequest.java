@@ -13,15 +13,15 @@ import java.util.Map;
  */
 
 @Schema(
-        description = "통합 인터페이스 실행 요청 정보 (SAP RFC 호출)",
-        requiredMode = Schema.RequiredMode.REQUIRED,
-        example = """
-                {
-                  "interfaceId": "WORK_ORDER",
-                  "data": {"plants": {"plant": "1110"}},
-                  "userId": "test"
-                }
-                """
+    description = "통합 인터페이스 실행 요청 정보 (SAP RFC 호출)",
+    requiredMode = Schema.RequiredMode.REQUIRED,
+    example = """
+        {
+          "interfaceId": "WORK_ORDER",
+          "data": {"plants": {"plant": "1110"}},
+          "userId": "test"
+        }
+        """
 )
 @Data
 @NoArgsConstructor
@@ -33,7 +33,7 @@ public class SimpleProxyRequest {
 
     @NotNull(message = "Data must exists")
     @Schema(description = "인터페이스 정의(YAML)에 명시된 구조에 따른 가변 요청 데이터",
-            example = "{\"plants\": {\"plant\": \"1110\"}}")
+        example = "{\"plants\": {\"plant\": \"1110\"}}")
     private Map<String, Object> data;
 
     @Schema(description = "요청 추적을 위한 고유 ID (생략 시 자동 생성)", example = "REQ-20231229-001")

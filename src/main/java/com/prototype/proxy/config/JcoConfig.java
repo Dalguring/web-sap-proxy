@@ -18,6 +18,7 @@ import java.util.Properties;
 @Slf4j
 @Configuration
 public class JcoConfig {
+
     @Value("${sap.jco.destination-name}")
     private String destinationName;
 
@@ -84,6 +85,7 @@ public class JcoConfig {
     }
 
     private static class InMemoryDestinationDataProvider implements DestinationDataProvider {
+
         private final Map<String, Properties> destinations = new HashMap<>();
 
         @Override

@@ -10,6 +10,7 @@ import org.springframework.web.context.annotation.RequestScope;
 @Component
 @RequestScope
 public class RequestContext {
+
     private String requestId;
     private String interfaceId;
 }

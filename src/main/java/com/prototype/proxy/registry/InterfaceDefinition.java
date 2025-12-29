@@ -9,6 +9,7 @@ import java.util.List;
  */
 @Data
 public class InterfaceDefinition {
+
     private String id;
     private String name;
     private String description;
@@ -21,6 +22,7 @@ public class InterfaceDefinition {
 
     @Data
     public static class FieldMapping {
+
         private String webField;
         private String sapField;
         private String type;
@@ -32,6 +34,7 @@ public class InterfaceDefinition {
 
     @Data
     public static class ImportMapping {
+
         private String webField;
         private String sapField;
         private String type;
@@ -42,6 +45,7 @@ public class InterfaceDefinition {
 
     @Data
     public static class TableMapping {
+
         private String webFields;
         private String sapTable;
         private boolean singleValue;
@@ -51,6 +55,7 @@ public class InterfaceDefinition {
 
     @Data
     public static class ExportMapping {
+
         private String sapParam;
         private String webField;
         private String type;
@@ -58,6 +63,7 @@ public class InterfaceDefinition {
 
     @Data
     public static class ReturnTableMapping {
+
         private String sapTable;
         private String webField;
         private List<FieldMapping> fields;
