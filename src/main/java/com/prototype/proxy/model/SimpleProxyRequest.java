@@ -28,7 +28,7 @@ import java.util.Map;
 public class SimpleProxyRequest {
 
     @NotBlank(message = "Interface ID is required")
-    @Schema(description = "실행할 인터페이스 고유 식별자(ID)", example = "STOCK_MOVEMENT")
+    @Schema(description = "실행할 인터페이스 고유 식별자(ID)", example = "WORK_ORDER")
     private String interfaceId;
 
     @NotNull(message = "Data must exists")
