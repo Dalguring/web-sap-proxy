@@ -42,7 +42,7 @@ public class MappingEngine {
             if (required) {
                 throw new InterfaceMappingException(interfaceId, "Required field missing: " + field);
             }
-            return null;
+            return defaultValue;
         }
 
         if (String.valueOf(value).length() > size) {
@@ -110,7 +110,6 @@ public class MappingEngine {
                     throw new InterfaceMappingException(requestContext.getInterfaceId(),
                             "Required table missing: " + tableMapping.getWebFields());
                 }
-                continue;
             }
 
             // 필드 매핑 설정 정보가 없는 경우
@@ -124,6 +123,11 @@ public class MappingEngine {
             List<Map<String, Object>> tableRows = new ArrayList<>();
 
             if (tableMapping.isSingleValue()) {
+                if (webValue instanceof List) {
+                    throw new InterfaceMappingException(requestContext.getInterfaceId(),
+                            String.format("Expected object for single value field '%s', but received array/list.",
+                                    tableMapping.getWebFields()));
+                }
                 Map<String, Object> row = new HashMap<>();
 
                 for (FieldMapping fieldMapping : tableMapping.getFields()) {
@@ -155,7 +159,8 @@ public class MappingEngine {
             else {
                 if (!(webValue instanceof List)) {
                     throw new InterfaceMappingException(requestContext.getInterfaceId(),
-                            "Field must be array/list: " + tableMapping.getWebFields());
+                            String.format("Expected array/list for multi-row field '%s', but received object/string.",
+                                    tableMapping.getWebFields()));
                 }
 
                 List<Map<String, Object>> rows = (List<Map<String, Object>>) webValue;
