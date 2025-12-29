@@ -1,6 +1,5 @@
 package com.prototype.proxy.registry;
 
-import com.prototype.proxy.model.FieldMapping;
 import lombok.Data;
 
 import java.util.List;
@@ -19,6 +18,17 @@ public class InterfaceDefinition {
     private List<TableMapping> tableMapping;
     private List<ExportMapping> exportMapping;
     private List<ReturnTableMapping> returnTableMapping;
+
+    @Data
+    public static class FieldMapping {
+        private String webField;
+        private String sapField;
+        private String type;
+        private boolean required;
+        private int size;
+        private String defaultValue;
+    }
+
 
     @Data
     public static class ImportMapping {

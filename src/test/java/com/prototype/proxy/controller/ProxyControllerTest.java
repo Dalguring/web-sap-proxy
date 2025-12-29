@@ -1,7 +1,10 @@
 package com.prototype.proxy.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prototype.proxy.context.RequestContext;
 import com.prototype.proxy.exception.NotFoundException;
+import com.prototype.proxy.model.SimpleProxyRequest;
+import com.prototype.proxy.model.SimpleProxyResponse;
 import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.registry.InterfaceRegistry;
 import com.prototype.proxy.service.ProxyService;
@@ -9,8 +12,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.util.Map;
 
@@ -103,5 +109,36 @@ class ProxyControllerTest {
                 .andExpect(jsonPath("$.message").value(errorMessage))
                 .andExpect(jsonPath("$.data.interfaceId").value(invalidId))
                 .andExpect(jsonPath("$.data.errorType").value("NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("api 호출 테스트")
+    void execute_rfc() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        SimpleProxyRequest request = new SimpleProxyRequest();
+        request.setInterfaceId("IF_TEST_001");
+        request.setData(Map.of("orderNo", "1234"));
+        request.setUserId("testUser");
+        request.setRequestId("1324");
+
+        SimpleProxyResponse response = SimpleProxyResponse.success(
+                Map.of("result", "OK"),
+                "1324",
+                1L
+        );
+
+        given(proxyService.execute(any(SimpleProxyRequest.class)))
+                .willReturn(response);
+
+        mockMvc.perform(
+                        post("/api/proxy/execute")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.result").value("OK"))
+                .andExpect(jsonPath("$.requestId").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }

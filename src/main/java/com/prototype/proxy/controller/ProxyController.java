@@ -6,6 +6,7 @@ import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.registry.InterfaceRegistry;
 import com.prototype.proxy.model.SimpleProxyResponse;
 import com.prototype.proxy.service.ProxyService;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -30,12 +31,16 @@ public class ProxyController {
     /**
      * Proxy 요청 실행
      */
-    @PostMapping("/execute")
+    @PostMapping(
+        value = "/execute",
+        consumes = "application/json",
+        produces = "application/json"
+    )
     public ResponseEntity<SimpleProxyResponse> execute(@Validated @RequestBody SimpleProxyRequest request) {
         if (request.getRequestId() == null || request.getRequestId().isBlank()) {
             request.setRequestId(UUID.randomUUID().toString());
         }
-        
+
         // RequestId 전역 저장
         requestContext.setRequestId(request.getRequestId());
 
@@ -90,6 +95,7 @@ public class ProxyController {
      * 특정 인터페이스 상세 조회
      */
     @GetMapping("/interfaces/{interfaceId}")
+    @Hidden
     public ResponseEntity<InterfaceDefinition> getInterface(@PathVariable String interfaceId) {
         InterfaceDefinition definition = registry.get(interfaceId);
         return ResponseEntity.ok(definition);
