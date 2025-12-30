@@ -10,7 +10,7 @@ import java.util.List;
  * Proxy Log Repository
  */
 @Repository
-public interface ProxyLogRepository extends JpaRepository<ProxyExecutionLog, Long> {
+public interface ProxyExecutionLogRepository extends JpaRepository<ProxyExecutionLog, Long> {
 
     /**
      * Request ID로 조회
