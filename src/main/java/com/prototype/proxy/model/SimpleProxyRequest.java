@@ -1,6 +1,7 @@
 package com.prototype.proxy.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema.AccessMode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -36,9 +37,12 @@ public class SimpleProxyRequest {
         example = "{\"plants\": {\"plant\": \"1110\"}}")
     private Map<String, Object> data;
 
-    @Schema(description = "요청 추적을 위한 고유 ID (생략 시 자동 생성)", example = "REQ-20231229-001")
+    @Schema(description = "요청 추적 ID (시스템 자동 생성)", accessMode = AccessMode.READ_ONLY)
     private String requestId;
 
     @Schema(description = "요청 시스템", example = "WMS")
     private String userId;
+
+    @Schema(hidden = true)
+    private String ipAddress;
 }

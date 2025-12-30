@@ -129,7 +129,7 @@ class ProxyControllerTest {
             1L
         );
 
-        given(proxyService.execute(any(SimpleProxyRequest.class)))
+        given(proxyService.executeRfc(any(SimpleProxyRequest.class)))
             .willReturn(response);
 
         mockMvc.perform(

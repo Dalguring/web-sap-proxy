@@ -10,27 +10,27 @@ import java.util.List;
  * Proxy Log Repository
  */
 @Repository
-public interface ProxyLogRepository extends JpaRepository<ProxyLog, Long> {
+public interface ProxyLogRepository extends JpaRepository<ProxyExecutionLog, Long> {
 
     /**
      * Request ID로 조회
      */
-    ProxyLog findByRequestId(String requestId);
+    ProxyExecutionLog findByRequestId(String requestId);
 
     /**
      * Interface ID로 조회
      */
-    List<ProxyLog> findByInterfaceIdOrderByCreatedAtDesc(String interfaceId);
+    List<ProxyExecutionLog> findByInterfaceIdOrderByCreatedAtDesc(String interfaceId);
 
     /**
      * 성공/실패 여부로 조회
      */
-    List<ProxyLog> findBySuccessOrderByCreatedAtDesc(Boolean success);
+    List<ProxyExecutionLog> findBySuccessOrderByCreatedAtDesc(Boolean success);
 
     /**
      * 기간별 조회
      */
-    List<ProxyLog> findByCreatedAtBetweenOrderByCreatedAtDesc(
+    List<ProxyExecutionLog> findByCreatedAtBetweenOrderByCreatedAtDesc(
         LocalDateTime startDate,
         LocalDateTime endDate
     );
