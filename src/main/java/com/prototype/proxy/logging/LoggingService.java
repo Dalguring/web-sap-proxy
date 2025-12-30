@@ -20,9 +20,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class LoggingService {
 
-    private final ProxyLogRepository logRepository;
+    private final ProxyLogRepository proxyLogRepository;
     private final ObjectMapper objectMapper;
+    private final SystemAccessLogRepository systemLogRepository;
 
+    /**
+     * 요청 로깅
+     */
     @Transactional
     public void logRequest(SimpleProxyRequest request) {
         this.logRequest(request, null);
@@ -30,9 +34,15 @@ public class LoggingService {
 
     @Transactional
     public void logRequest(SimpleProxyRequest request, InterfaceDefinition definition) {
-        ProxyLog logEntity = createInitialLog(request, definition);
-        logRepository.save(logEntity);
-        log.debug("Request logged: {}", request.getRequestId());
+        ProxyExecutionLog logEntity = createExecutionLog(request, definition);
+        proxyLogRepository.save(logEntity);
+        log.debug("Request proxy execution logged: {}", request.getRequestId());
+    }
+
+    @Transactional
+    public void logRequest(String requestId, String endpoint, String method, String ipAddress) {
+        SystemAccessLog log = createSystemAccessLog(requestId, endpoint, method, ipAddress);
+        systemLogRepository.save(log);
     }
 
     /**
@@ -40,7 +50,7 @@ public class LoggingService {
      */
     @Transactional
     public void logResponse(SimpleProxyRequest request, SimpleProxyResponse response, InterfaceDefinition definition) {
-        ProxyLog logEntity = getOrCreateLog(request, definition);
+        ProxyExecutionLog logEntity = getOrCreateExecutionLog(request, definition);
 
         if (definition != null) {
             logEntity.setRfcFunction(definition.getRfcFunction());
@@ -54,7 +64,18 @@ public class LoggingService {
             logEntity.setErrorMessage(response.message());
         }
 
-        logRepository.save(logEntity);
+        proxyLogRepository.save(logEntity);
+    }
+
+    @Transactional
+    public void logResponse(String requestId, String endpoint, String method, String ipAddress, SimpleProxyResponse response) {
+        SystemAccessLog logEntity = getOrCreateSystemAccessLog(requestId, endpoint, method, ipAddress);
+
+        logEntity.setMetadata(toJson(response.data()));
+        logEntity.setSuccess(response.success());
+        logEntity.setExecutionTimeMs(response.executionTimeMs());
+
+        systemLogRepository.save(logEntity);
     }
 
     /**
@@ -67,7 +88,7 @@ public class LoggingService {
 
     @Transactional
     public void logError(SimpleProxyRequest request, Exception error, InterfaceDefinition definition) {
-        ProxyLog logEntity = getOrCreateLog(request, definition);
+        ProxyExecutionLog logEntity = getOrCreateExecutionLog(request, definition);
 
         if (definition != null && logEntity.getRfcFunction() == null) {
             logEntity.setRfcFunction(definition.getRfcFunction());
@@ -76,27 +97,49 @@ public class LoggingService {
         logEntity.setSuccess(false);
         logEntity.setErrorMessage(error.getMessage());
 
-        logRepository.save(logEntity);
+        proxyLogRepository.save(logEntity);
     }
 
-    private ProxyLog getOrCreateLog(SimpleProxyRequest request, InterfaceDefinition definition) {
-        ProxyLog logEntity = logRepository.findByRequestId(request.getRequestId());
+    private ProxyExecutionLog getOrCreateExecutionLog(SimpleProxyRequest request, InterfaceDefinition definition) {
+        ProxyExecutionLog logEntity = proxyLogRepository.findByRequestId(request.getRequestId());
 
         if (logEntity == null) {
             log.debug("No existing log found for requestId: {}, creating new one", request.getRequestId());
-            return createInitialLog(request, definition);
+            return createExecutionLog(request, definition);
         }
 
         return logEntity;
     }
 
-    private ProxyLog createInitialLog(SimpleProxyRequest request, InterfaceDefinition definition) {
-        return ProxyLog.builder()
+    private SystemAccessLog getOrCreateSystemAccessLog(String requestId, String endpoint, String method, String ipAddress) {
+        SystemAccessLog logEntity = systemLogRepository.findByRequestId(requestId);
+
+        if (logEntity == null) {
+            log.debug("No existing log found for requestId: {}, creating new one", requestId);
+            return createSystemAccessLog(requestId, endpoint, method, ipAddress);
+        }
+
+        return logEntity;
+    }
+
+    private ProxyExecutionLog createExecutionLog(SimpleProxyRequest request, InterfaceDefinition definition) {
+        return ProxyExecutionLog.builder()
             .requestId(request.getRequestId())
             .interfaceId(request.getInterfaceId())
             .rfcFunction(definition != null ? definition.getRfcFunction() : null)
             .userId(request.getUserId())
+            .ipAddress(request.getIpAddress())
             .requestData(toJson(request.getData()))
+            .createdAt(LocalDateTime.now())
+            .build();
+    }
+
+    private SystemAccessLog createSystemAccessLog(String requestId, String endpoint, String method, String ipAddress) {
+        return SystemAccessLog.builder()
+            .requestId(requestId)
+            .endpoint(endpoint)
+            .ipAddress(ipAddress)
+            .method(method)
             .createdAt(LocalDateTime.now())
             .build();
     }

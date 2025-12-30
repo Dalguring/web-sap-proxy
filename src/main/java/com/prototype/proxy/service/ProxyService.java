@@ -9,6 +9,9 @@ import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.registry.InterfaceRegistry;
 import com.prototype.proxy.logging.LoggingService;
 import com.prototype.proxy.model.SimpleProxyResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.UUID;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +34,16 @@ public class ProxyService {
     /**
      * Proxy 요청 실행
      */
-    public SimpleProxyResponse execute(SimpleProxyRequest request) {
-        long startTime = System.currentTimeMillis();
-        // InterfaceId 전역 저장
+    public SimpleProxyResponse executeRfc(SimpleProxyRequest request) {
+        String requestId = UUID.randomUUID().toString();
+        request.setRequestId(requestId);
+        requestContext.setRequestId(requestId);
         requestContext.setInterfaceId(request.getInterfaceId());
+
+        log.info("Received proxy request - ID: {}, Interface: {}",
+            request.getRequestId(), request.getInterfaceId());
+
+        long startTime = System.currentTimeMillis();
         loggingService.logRequest(request);
 
         InterfaceDefinition definition = null;
@@ -105,6 +114,58 @@ public class ProxyService {
             loggingService.logError(request, e, definition);
 
             throw new ProxyException(e.getMessage(), e, request.getRequestId());
+        }
+    }
+
+    public SimpleProxyResponse getHealth(HttpServletRequest request) {
+        return executeSystemAction(request, () -> {
+            Map<String, Object> data = new HashMap<>();
+            data.put("service", "Interface Proxy Server - get health");
+            data.put("loadedInterfaces", registry.getAllDefinitions().size());
+            return data;
+        });
+    }
+
+    public SimpleProxyResponse getInterfaceList(HttpServletRequest request) {
+        return executeSystemAction(request, () -> {
+            Map<String, Object> data = new HashMap<>();
+            data.put("interfaces", registry.getAllDefinitions());
+            return data;
+        });
+    }
+
+    public SimpleProxyResponse getInterfaceDetail(String interfaceId, HttpServletRequest request) {
+        return executeSystemAction(request, () -> {
+            Map<String, Object> data = new HashMap<>();
+            InterfaceDefinition definition = registry.get(interfaceId);
+            data.put(definition.getId(), definition);
+            return data;
+        });
+    }
+
+    private SimpleProxyResponse executeSystemAction(HttpServletRequest request, Supplier<Map<String, Object>> action) {
+        String requestId = UUID.randomUUID().toString();
+        requestContext.setRequestId(requestId);
+
+        String path = request.getServletPath();
+        String method = request.getMethod();
+        String ip = request.getRemoteAddr();
+
+        loggingService.logRequest(requestId, path, method, ip);
+        long startTime = System.currentTimeMillis();
+
+        try {
+            Map<String, Object> data = action.get();
+
+            long duration = System.currentTimeMillis() - startTime;
+            SimpleProxyResponse response = SimpleProxyResponse.success(data, requestId, duration);
+
+            loggingService.logResponse(requestId, path, method, ip, response);
+            return response;
+        } catch (Exception e) {
+            SimpleProxyResponse errorResponse = SimpleProxyResponse.error(e.getMessage(), requestId);
+            loggingService.logResponse(requestId, path, method, ip, errorResponse);
+            throw e;
         }
     }
 
