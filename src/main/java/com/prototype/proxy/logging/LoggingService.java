@@ -7,6 +7,7 @@ import com.prototype.proxy.model.SimpleProxyResponse;
 import com.prototype.proxy.registry.InterfaceDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,18 +21,20 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class LoggingService {
 
-    private final ProxyLogRepository proxyLogRepository;
+    private final ProxyExecutionLogRepository proxyLogRepository;
     private final ObjectMapper objectMapper;
     private final SystemAccessLogRepository systemLogRepository;
 
     /**
      * 요청 로깅
      */
+    @Async
     @Transactional
     public void logRequest(SimpleProxyRequest request) {
         this.logRequest(request, null);
     }
 
+    @Async
     @Transactional
     public void logRequest(SimpleProxyRequest request, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = createExecutionLog(request, definition);
@@ -39,6 +42,7 @@ public class LoggingService {
         log.debug("Request proxy execution logged: {}", request.getRequestId());
     }
 
+    @Async
     @Transactional
     public void logRequest(String requestId, String endpoint, String method, String ipAddress) {
         SystemAccessLog log = createSystemAccessLog(requestId, endpoint, method, ipAddress);
@@ -48,6 +52,7 @@ public class LoggingService {
     /**
      * 응답 로깅 (성공)
      */
+    @Async
     @Transactional
     public void logResponse(SimpleProxyRequest request, SimpleProxyResponse response, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = getOrCreateExecutionLog(request, definition);
@@ -67,6 +72,7 @@ public class LoggingService {
         proxyLogRepository.save(logEntity);
     }
 
+    @Async
     @Transactional
     public void logResponse(String requestId, String endpoint, String method, String ipAddress, SimpleProxyResponse response) {
         SystemAccessLog logEntity = getOrCreateSystemAccessLog(requestId, endpoint, method, ipAddress);
@@ -81,11 +87,13 @@ public class LoggingService {
     /**
      * 에러 로깅
      */
+    @Async
     @Transactional
     public void logError(SimpleProxyRequest request, Exception error) {
         this.logError(request, error, null);
     }
 
+    @Async
     @Transactional
     public void logError(SimpleProxyRequest request, Exception error, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = getOrCreateExecutionLog(request, definition);
