@@ -3,6 +3,8 @@ import {Link} from 'react-router-dom';
 import client from '../api/client';
 import type {InterfaceDefinition} from '../types/interface';
 
+const CACHE_KEY = 'cached_interfaces'; // 캐시 키 정의
+
 interface SimpleProxyResponse {
     success: boolean;
     message?: string;
@@ -19,14 +21,31 @@ const InterfaceList = () => {
     }, []);
 
     const fetchInterfaces = async () => {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+            setInterfaces(JSON.parse(cached));
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await client.get<SimpleProxyResponse>('/proxy/interfaces');
             const result = response.data;
 
-            if (result.success && result.data && result.data['interfaces']) {
-                const interfacesMap = result.data['interfaces'] as Record<string, InterfaceDefinition>;
-                const interfacesList = Object.values(interfacesMap);
-                setInterfaces(interfacesList);
+            if (result.success && result.data) {
+                let list: InterfaceDefinition[] = [];
+
+                if (Array.isArray(result.data)) {
+                    list = result.data;
+                } else if (result.data.interfaces) {
+                    list = Object.values(result.data.interfaces);
+                } else if (typeof result.data === 'object') {
+                    list = Object.values(result.data);
+                }
+
+                setInterfaces(list);
+
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify(list));
             } else {
                 setInterfaces([]);
             }

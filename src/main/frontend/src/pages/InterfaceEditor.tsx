@@ -147,7 +147,10 @@ const InterfaceEditor = () => {
         try {
             console.log('Saving...', def);
             // TODO: 실제 API 저장 호출
-            alert('저장되었습니다. (콘솔 확인)');
+
+            sessionStorage.removeItem('cached_interfaces');
+
+            alert('저장되었습니다.');
             setIsEditing(false);
         } catch (e) {
             alert('저장 실패');
