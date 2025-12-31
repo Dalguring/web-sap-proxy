@@ -247,7 +247,7 @@ public class MappingEngine {
         }
 
         for (ReturnTableMapping mapping : mappings) {
-            List<Map<String, Object>> sapTable = returnTables.get(mapping.getSapTable());
+            List<Map<String, Object>> sapTable = returnTables.get(mapping.getSapReturnTable());
 
             if (ObjectUtils.isEmpty(sapTable)) {
                 continue;
@@ -268,7 +268,7 @@ public class MappingEngine {
                 webRows.add(webRow);
             }
 
-            result.put(mapping.getWebField(), webRows);
+            result.put(mapping.getWebReturnList(), webRows);
         }
 
         return result;

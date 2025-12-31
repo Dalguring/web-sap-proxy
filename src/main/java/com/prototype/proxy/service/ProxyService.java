@@ -198,7 +198,7 @@ public class ProxyService {
                     row.put(field.getSapField(), "MOCK_" + field.getSapField());
                 }
 
-                mockData.put(mapping.getSapTable(), List.of(row));
+                mockData.put(mapping.getSapReturnTable(), List.of(row));
             }
         }
 

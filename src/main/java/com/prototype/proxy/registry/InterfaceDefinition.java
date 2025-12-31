@@ -31,7 +31,6 @@ public class InterfaceDefinition {
         private String defaultValue;
     }
 
-
     @Data
     public static class ImportMapping {
 
@@ -59,13 +58,14 @@ public class InterfaceDefinition {
         private String sapParam;
         private String webField;
         private String type;
+        private int size;
     }
 
     @Data
     public static class ReturnTableMapping {
 
-        private String sapTable;
-        private String webField;
+        private String sapReturnTable;
+        private String webReturnList;
         private List<FieldMapping> fields;
     }
 }
