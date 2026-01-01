@@ -7,96 +7,118 @@ interface:
   importMapping: []
 
   tableMapping:
-    - webField: movements
+    - webFields: movements
       sapTable: ITF_WMS_MOVEMENT
       singleValue: false
       fields:
-
         - webField: bwart
           sapField: BWART
           type: string
           required: true
+          size: 4
 
         - webField: budat
           sapField: BUDAT
           type: string
+          size: 8
 
         - webField: werks
           sapField: WERKS
           type: string
+          size: 4
 
         - webField: matnr
           sapField: MATNR
           type: string
+          size: 20
 
         - webField: lgort
           sapField: LGORT
           type: string
+          size: 4
 
         - webField: charg
           sapField: CHARG
           type: string
+          size: 10
 
         - webField: menge
           sapField: MENGE
           type: string
+          size: 8
 
         - webField: ummat
           sapField: UMMAT
           type: string
+          size: 20
 
         - webField: umwrk
           sapField: UMWRK
           type: string
+          size: 20
 
         - webField: umlgo
           sapField: UMLGO
           type: string
+          size: 20
 
         - webField: umcha
           sapField: UMCHA
           type: string
+          size: 20
 
         - webField: kostl
           sapField: KOSTL
           type: string
+          size: 20
 
         - webField: usnam
           sapField: USNAM
           type: string
+          size: 8
 
   exportMapping: []
 
   returnTableMapping:
-    - sapTable: ET_RETURN
-      webField: results
+    - sapReturnTable: ET_RETURN
+      webReturnList: results
       fields:
         - sapField: WERKS
           webField: werks
+          size: 4
 
         - sapField: MATNR
           webField: matnr
+          size: 20
 
         - sapField: MBLNR
           webField: mblnr
+          size: 20
 
         - sapField: MJAHR
           webField: mjahr
+          size: 20
 
         - sapField: ZEILE
           webField: zeile
+          size: 20
 
         - sapField: TYPE
           webField: type
+          size: 1
 
         - sapField: MESSAGE
           webField: message
+          size: 255
 
         - sapField: IF_DATE
           webField: ifDate
+          size: 8
 
         - sapField: IF_TIME
           webField: ifTime
+          size: 8
 
         - sapField: IF_SEQ
           webField: ifSeq
+          size: 10
