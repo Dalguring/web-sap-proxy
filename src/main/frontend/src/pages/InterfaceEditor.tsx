@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import type { InterfaceDefinition } from '../types/interface';
 
+const DETAIL_CACHE_PREFIX = 'cached_interface_detail_';
+
 // SAP Type 목록 정의
 const SAP_TYPES = ['STRING', 'CHAR', 'DECIMAL', 'NUMBER', 'DATE', 'DATETIME', 'INT', 'ARRAY', 'STRUCT', 'TABLE'];
 
@@ -34,13 +36,32 @@ const InterfaceEditor = () => {
     }, [id]);
 
     const fetchInterfaceDetail = async (interfaceId: string) => {
+        const cacheKey = DETAIL_CACHE_PREFIX + interfaceId;
+        const cached = sessionStorage.getItem(cacheKey);
+
+        if (cached) {
+            setDef(JSON.parse(cached));
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
-            const response = await client.get(`/proxy/interfaces`);
+            const response = await client.get(`/proxy/interfaces/${interfaceId}`);
             const result = response.data;
-            const dataMap = result.data?.interfaces || result.data;
-            if (dataMap && dataMap[interfaceId]) {
-                setDef(dataMap[interfaceId]);
+            const dataMap = result.data?.interface || result.data;
+            if (result.success && result.data) {
+                const detailData = result.data[interfaceId] || Object.values(result.data)[0];
+
+                if (detailData) {
+                    setDef(detailData);
+                    sessionStorage.setItem(cacheKey, JSON.stringify(detailData));
+                } else {
+                    alert('인터페이스 상세 정보가 비어있습니다.');
+                }
+            } else {
+                alert(result.message || '인터페이스 정보를 찾을 수 없습니다.');
+                navigate('/');
             }
         } catch (error) {
             console.error(error);
@@ -149,6 +170,9 @@ const InterfaceEditor = () => {
             // TODO: 실제 API 저장 호출
 
             sessionStorage.removeItem('cached_interfaces');
+            if (def.id) {
+                sessionStorage.removeItem(DETAIL_CACHE_PREFIX + def.id);
+            }
 
             alert('저장되었습니다.');
             setIsEditing(false);
