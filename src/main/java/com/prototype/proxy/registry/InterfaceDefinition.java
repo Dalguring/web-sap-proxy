@@ -29,6 +29,7 @@ public class InterfaceDefinition {
         private boolean required;
         private int size;
         private String defaultValue;
+        private String example;
     }
 
     @Data
@@ -40,6 +41,7 @@ public class InterfaceDefinition {
         private boolean required;
         private int size;
         private String defaultValue;
+        private String example;
     }
 
     @Data
@@ -59,6 +61,7 @@ public class InterfaceDefinition {
         private String webField;
         private String type;
         private int size;
+        private String example;
     }
 
     @Data
