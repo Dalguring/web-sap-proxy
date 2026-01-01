@@ -34,7 +34,7 @@ server:
 
 # 인터페이스 정의 경로
 interface:
-  definition-path: classpath:interfaces/
+  definition-path: file:src/main/resources/interfaces/
 
 springdoc:
   packages-to-scan: com.prototype.proxy.model, com.prototype.proxy.controller

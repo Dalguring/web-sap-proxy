@@ -67,7 +67,7 @@ public class InterfaceRegistry {
                 InterfaceDefinition.class
             );
 
-            registry.put(definition.getId(), definition);
+            registry.put(definition.getId().toUpperCase(), definition);
             log.debug("Loaded interface: {} from {}", definition.getId(), resource.getFilename());
         } catch (IOException e) {
             log.error("Failed to load definition from: {}", resource.getFilename(), e);
