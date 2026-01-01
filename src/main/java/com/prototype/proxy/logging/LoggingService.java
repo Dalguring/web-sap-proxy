@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -28,22 +29,19 @@ public class LoggingService {
     /**
      * 요청 로깅
      */
-    @Async
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logRequest(SimpleProxyRequest request) {
         this.logRequest(request, null);
     }
 
-    @Async
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logRequest(SimpleProxyRequest request, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = createExecutionLog(request, definition);
         proxyLogRepository.save(logEntity);
         log.debug("Request proxy execution logged: {}", request.getRequestId());
     }
 
-    @Async
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logRequest(String requestId, String endpoint, String method, String ipAddress) {
         SystemAccessLog log = createSystemAccessLog(requestId, endpoint, method, ipAddress);
         systemLogRepository.save(log);
