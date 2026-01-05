@@ -369,11 +369,10 @@ const InterfaceEditor = () => {
                 <div className="flex justify-between items-start mb-8 border-b pb-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">IF ID</span>
-                            {def.id}
-                            <span className={`text-xs px-2 py-1 rounded font-bold ml-2 ${def.sapModule ? 'bg-purple-600 text-white' : 'bg-gray-400 text-white'}`}>
-                                MODULE {def.sapModule || '-'}
+                            <span className={`text-white text-xs px-2 py-1 rounded ${def.sapModule ? 'bg-purple-600' : 'bg-gray-400'}`}>
+                                {def.sapModule || 'N/A'}
                             </span>
+                            {def.id}
                         </h1>
                         <h2 className="text-xl text-gray-700 mt-2 font-semibold">{def.name || '(No Name)'}</h2>
                         <p className="text-gray-500 mt-1 text-sm">{def.description}</p>
