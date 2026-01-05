@@ -4,7 +4,8 @@ import client from '../api/client';
 import type { InterfaceDefinition } from '../types/interface';
 
 // SAP 타입 정의
-const SAP_TYPES = ['STRING', 'CHAR', 'DECIMAL', 'NUMBER', 'DATE', 'DATETIME', 'INT', 'ARRAY', 'STRUCT', 'TABLE'];
+const SAP_TYPES = ['CHAR', 'STRING', 'DECIMAL', 'NUMBER', 'DATE', 'DATETIME', 'INT', 'ARRAY', 'STRUCT', 'TABLE'];
+const DEFAULT_TYPE = 'CHAR';
 const DETAIL_CACHE_PREFIX = 'cached_interface_detail_';
 
 // 초기 상태
@@ -40,13 +41,34 @@ const InterfaceEditor = () => {
         }
     }, [id]);
 
+    const sanitizeData = (data: InterfaceDefinition): InterfaceDefinition => {
+        const fixType = (item: any) => ({
+            ...item,
+            type: item.type || DEFAULT_TYPE
+        });
+
+        return {
+            ...data,
+            importMapping: data.importMapping?.map(fixType) || [],
+            exportMapping: data.exportMapping?.map(fixType) || [],
+            tableMapping: data.tableMapping?.map((table: any) => ({
+                ...table,
+                fields: table.fields?.map(fixType) || []
+            })) || [],
+            returnTableMapping: data.returnTableMapping?.map((table: any) => ({
+                ...table,
+                fields: table.fields?.map(fixType) || []
+            })) || []
+        };
+    };
+
     // 상세 조회 (캐싱 적용)
     const fetchInterfaceDetail = async (interfaceId: string) => {
         const cacheKey = DETAIL_CACHE_PREFIX + interfaceId;
         const cached = sessionStorage.getItem(cacheKey);
 
         if (cached) {
-            setDef(JSON.parse(cached));
+            setDef(sanitizeData(JSON.parse(cached)));
             return;
         }
 
@@ -59,8 +81,10 @@ const InterfaceEditor = () => {
                 // 백엔드 응답이 Map 형태이므로 ID로 데이터 추출
                 const detailData = result.data[interfaceId] || Object.values(result.data)[0];
                 if (detailData) {
-                    setDef(detailData);
-                    sessionStorage.setItem(cacheKey, JSON.stringify(detailData));
+                    const sanitized = sanitizeData(detailData);
+                    setDef(sanitized);
+
+                    sessionStorage.setItem(cacheKey, JSON.stringify(sanitized));
                 } else {
                     alert('상세 데이터가 없습니다.');
                 }
@@ -101,9 +125,9 @@ const InterfaceEditor = () => {
     const addRow = (type: MappingType) => {
         const newDef = { ...def };
         if (type === 'import') {
-            newDef.importMapping = [...(newDef.importMapping || []), { webField: '', sapField: '', type: 'STRING', required: true, size: 0, example: '' }];
+            newDef.importMapping = [...(newDef.importMapping || []), { webField: '', sapField: '', type: DEFAULT_TYPE, required: true, size: 0, example: '' }];
         } else if (type === 'export') {
-            newDef.exportMapping = [...(newDef.exportMapping || []), { webField: '', sapParam: '', type: 'STRING', size: 0, example: '' }];
+            newDef.exportMapping = [...(newDef.exportMapping || []), { webField: '', sapParam: '', type: DEFAULT_TYPE, size: 0, example: '' }];
         } else {
             const targetList = type === 'table' ? 'tableMapping' : 'returnTableMapping';
             const { web, sap } = getKeys(type);
@@ -137,7 +161,7 @@ const InterfaceEditor = () => {
         const newDef = { ...def };
         const list = type === 'return' ? newDef.returnTableMapping : newDef.tableMapping;
         if (!list[tableIndex].fields) list[tableIndex].fields = [];
-        list[tableIndex].fields.push({ webField: '', sapField: '', type: 'STRING', required: false, size: 0, example: '' });
+        list[tableIndex].fields.push({ webField: '', sapField: '', type: DEFAULT_TYPE, required: false, size: 0, example: '' });
         setDef(newDef);
     };
 
@@ -193,11 +217,11 @@ const InterfaceEditor = () => {
         if (!(await validate())) return;
 
         try {
-            // 대문자 자동 변환
+            const sanitizedDef = sanitizeData(def);
             const payload = {
-                ...def,
-                id: def.id.toUpperCase(),
-                rfcFunction: def.rfcFunction.toUpperCase()
+                ...sanitizedDef,
+                id: sanitizedDef.id.toUpperCase(),
+                rfcFunction: sanitizedDef.rfcFunction.toUpperCase()
             };
 
             await client.post('/admin/interfaces/save', payload);
@@ -209,6 +233,7 @@ const InterfaceEditor = () => {
             }
 
             alert('저장되었습니다.');
+
             if (!id) {
                 navigate(`/edit/${payload.id}`);
             } else {
@@ -298,7 +323,7 @@ const InterfaceEditor = () => {
                                             )}
                                             <td className="px-4 py-2 border-r truncate" title={field.webField}>{field.webField}</td>
                                             <td className="px-4 py-2 border-r truncate" title={field.sapField}>{field.sapField}</td>
-                                            <td className="px-4 py-2 border-r text-center truncate">{field.type}</td>
+                                            <td className="px-4 py-2 border-r text-center truncate">{field.type || DEFAULT_TYPE}</td>
                                             <td className="px-4 py-2 border-r text-center">{field.size}</td>
                                             <td className="px-4 py-2 bg-blue-50/30 text-gray-600 truncate">{field.example || '-'}</td>
                                         </tr>
@@ -317,7 +342,7 @@ const InterfaceEditor = () => {
                                     <tr key={idx} className="hover:bg-gray-50">
                                         <td className="px-4 py-2 border-r truncate" title={item.webField}>{item.webField}</td>
                                         <td className="px-4 py-2 border-r truncate" title={type === 'export' ? item.sapParam : item.sapField}>{type === 'export' ? item.sapParam : item.sapField}</td>
-                                        <td className="px-4 py-2 border-r text-center truncate">{item.type}</td>
+                                        <td className="px-4 py-2 border-r text-center truncate">{item.type || DEFAULT_TYPE}</td>
                                         <td className="px-4 py-2 border-r text-center">{item.size}</td>
                                         <td className="px-4 py-2 bg-blue-50/30 text-gray-600 truncate">{item.example || '-'}</td>
                                     </tr>
@@ -328,7 +353,7 @@ const InterfaceEditor = () => {
                 </table>
             </div>
         );
-    };
+    }
 
     // --- 메인 렌더링 (뷰 모드) ---
     if (!isEditing) {
@@ -414,7 +439,7 @@ const InterfaceEditor = () => {
                                     <div className="col-span-3"><input type="text" value={row.webField} onChange={(e) => handleMappingChange(activeTab, idx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="Web"/></div>
                                     <div className="col-span-3"><input type="text" value={activeTab === 'export' ? row.sapParam : row.sapField} onChange={(e) => handleMappingChange(activeTab, idx, activeTab === 'export' ? 'sapParam' : 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="SAP"/></div>
                                     <div className="col-span-2">
-                                        <select value={row.type || 'STRING'} onChange={(e) => handleMappingChange(activeTab, idx, 'type', e.target.value)} className="w-full border rounded p-1 text-sm text-center bg-white">
+                                        <select value={row.type || 'CHAR'} onChange={(e) => handleMappingChange(activeTab, idx, 'type', e.target.value)} className="w-full border rounded p-1 text-sm text-center bg-white">
                                             {SAP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>
                                     </div>
@@ -448,7 +473,7 @@ const InterfaceEditor = () => {
                                                     <div className="col-span-3"><input type="text" value={field.webField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm"/></div>
                                                     <div className="col-span-3"><input type="text" value={field.sapField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50"/></div>
                                                     <div className="col-span-2">
-                                                        <select value={field.type || 'STRING'} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'type', e.target.value)} className="w-full border rounded p-1 text-sm text-center bg-white">
+                                                        <select value={field.type || 'CHAR'} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'type', e.target.value)} className="w-full border rounded p-1 text-sm text-center bg-white">
                                                             {SAP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                                         </select>
                                                     </div>
@@ -479,6 +504,6 @@ const InterfaceEditor = () => {
             </div>
         </div>
     );
-};
+}
 
 export default InterfaceEditor;
