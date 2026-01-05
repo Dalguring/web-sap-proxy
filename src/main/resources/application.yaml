@@ -2,38 +2,15 @@ spring:
   application:
     name: interface-proxy-server
 
-  # H2 Database 설정
-  datasource:
-    url: jdbc:h2:mem:proxydb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  # JPA 설정
-  jpa:
-    hibernate:
-      ddl-auto: create
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-    open-in-view: false
-
-  # H2 콘솔 활성화
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-  # secret yaml 파일 profile
   profiles:
-    active: secret
+    active: local
+    group:
+      local: local, secret
+      dev: dev, secret
 
-# 서버 포트
 server:
   port: 8080
 
-# 인터페이스 정의 경로
 interface:
   definition-path: file:src/main/resources/interfaces/
 
@@ -47,9 +24,53 @@ springdoc:
   api-docs:
     path: /api-docs
 
-# 로깅 레벨
 logging:
   level:
     root: INFO
     com.prototype.proxy: DEBUG
     com.sap.conn.jco: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    url: jdbc:h2:mem:proxydb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/proxydb
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
