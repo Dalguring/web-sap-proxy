@@ -110,6 +110,17 @@ public class LoggingService {
         proxyLogRepository.save(logEntity);
     }
 
+    @Async
+    @Transactional
+    public void logError(String requestId, String endpoint, String method, String ipAddress, Exception error) {
+        SystemAccessLog logEntity = getOrCreateSystemAccessLog(requestId, endpoint, method, ipAddress);
+
+        logEntity.setSuccess(false);
+        logEntity.setErrorMessage(error.getMessage());
+
+        systemLogRepository.save(logEntity);
+    }
+
     private ProxyExecutionLog getOrCreateExecutionLog(SimpleProxyRequest request, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = proxyLogRepository.findByRequestId(request.getRequestId());
 

@@ -43,7 +43,6 @@ public class ProxyController {
     ) {
         request.setIpAddress(servletRequest.getRemoteAddr());
         SimpleProxyResponse response = proxyService.executeRfc(request);
-
         return ResponseEntity.ok(response);
     }
 

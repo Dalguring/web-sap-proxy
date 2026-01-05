@@ -45,6 +45,9 @@ public class SystemAccessLog {
     @Column
     private Long executionTimeMs;
 
+    @Column(length = 1000)
+    private String errorMessage;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 }

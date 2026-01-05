@@ -167,8 +167,7 @@ public class ProxyService {
             loggingService.logResponse(requestId, path, method, ip, response);
             return response;
         } catch (Exception e) {
-            SimpleProxyResponse errorResponse = SimpleProxyResponse.error(e.getMessage(), requestId);
-            loggingService.logResponse(requestId, path, method, ip, errorResponse);
+            loggingService.logError(requestId, path, method, ip, e);
             throw e;
         }
     }

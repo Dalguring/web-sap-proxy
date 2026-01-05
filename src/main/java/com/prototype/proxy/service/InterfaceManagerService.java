@@ -3,11 +3,15 @@ package com.prototype.proxy.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.prototype.proxy.logging.LoggingService;
+import com.prototype.proxy.model.SimpleProxyResponse;
 import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.registry.InterfaceRegistry;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 public class InterfaceManagerService {
 
     private final InterfaceRegistry registry;
+    private final LoggingService loggingService;
 
     @Value("${interface.definition-path:src/main/resources/interfaces/}")
     private String definitionPath;
@@ -42,7 +47,7 @@ public class InterfaceManagerService {
         return file.exists();
     }
 
-    public void saveInterface(InterfaceDefinition definition) {
+    public void saveInterface(InterfaceDefinition definition, HttpServletRequest request) {
         if (definition.getId() != null) {
             definition.setId(definition.getId().toUpperCase());
         }
@@ -50,6 +55,8 @@ public class InterfaceManagerService {
             definition.setRfcFunction(definition.getRfcFunction().toUpperCase());
         }
 
+        long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString();
         String filename = definition.getId() + ".yml";
         File file = new File(getRealFilePath() + filename);
 
@@ -62,26 +69,69 @@ public class InterfaceManagerService {
             yamlMapper.writeValue(file, yamlData);
             log.info("Interface definition saved: {}", file.getAbsolutePath());
 
+            SimpleProxyResponse response = SimpleProxyResponse.success(yamlData, requestId,
+                System.currentTimeMillis() - start);
+            loggingService.logResponse(
+                requestId,
+                request.getServletPath(),
+                request.getMethod(),
+                request.getRemoteAddr(),
+                response
+            );
+
             registry.reload();
         } catch (IOException e) {
             log.error("Failed to save interface definition", e);
+            loggingService.logError(
+                requestId,
+                request.getServletPath(),
+                request.getMethod(),
+                request.getRemoteAddr(),
+                e
+            );
             throw new RuntimeException("Failed to save interface file", e);
         }
     }
 
-    public void deleteInterface(String interfaceId) {
+    public void deleteInterface(String interfaceId, HttpServletRequest request) {
+        long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString();
         String filename = interfaceId.toUpperCase() + ".yml";
         File file = new File(getRealFilePath() + filename);
 
-        if (file.exists()) {
-            if (file.delete()) {
-                log.info("Interface definition deleted: {}", filename);
-                registry.reload();
+        try {
+            if (file.exists()) {
+                if (file.delete()) {
+                    log.info("Interface definition deleted: {}", filename);
+                    registry.reload();
+                } else {
+                    throw new RuntimeException("Failed to delete file: " + filename);
+                }
             } else {
-                throw new RuntimeException("Failed to delete file: " + filename);
+                log.warn("File not found for deletion: {}", filename);
             }
-        } else {
-            log.warn("File not found for deletion: {}", filename);
+
+            SimpleProxyResponse response = SimpleProxyResponse.success(null, requestId,
+                System.currentTimeMillis() - start);
+
+            loggingService.logResponse(
+                requestId,
+                request.getServletPath(),
+                request.getMethod(),
+                request.getRemoteAddr(),
+                response
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to delete interface", e);
+            loggingService.logError(
+                requestId,
+                request.getServletPath(),
+                request.getMethod(),
+                request.getRemoteAddr(),
+                e
+            );
+            throw (RuntimeException) e;
         }
     }
 }

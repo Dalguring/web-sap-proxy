@@ -5,6 +5,7 @@ import com.prototype.proxy.service.InterfaceManagerService;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,15 +26,15 @@ public class InterfaceManagementController {
 
     @Operation(summary = "인터페이스 저장/수정", description = "YAML 파일을 생성하고 리로드합니다.")
     @PostMapping("/save")
-    public ResponseEntity<String> saveInterface(@RequestBody InterfaceDefinition definition) {
-        managerService.saveInterface(definition);
+    public ResponseEntity<String> saveInterface(@RequestBody InterfaceDefinition definition, HttpServletRequest request) {
+        managerService.saveInterface(definition, request);
         return ResponseEntity.ok("Saved and reloaded successfully");
     }
 
     @Operation(summary = "인터페이스 삭제", description = "YAML 파일을 삭제하고 리로드합니다.")
     @DeleteMapping("/{interfaceId}")
-    public ResponseEntity<String> deleteInterface(@PathVariable String interfaceId) {
-        managerService.deleteInterface(interfaceId);
+    public ResponseEntity<String> deleteInterface(@PathVariable String interfaceId, HttpServletRequest request) {
+        managerService.deleteInterface(interfaceId, request);
         return ResponseEntity.ok("Deleted and reloaded successfully");
     }
 }
