@@ -57,6 +57,7 @@ public class LoggingService {
 
         if (definition != null) {
             logEntity.setRfcFunction(definition.getRfcFunction());
+            logEntity.setSapModule(definition.getSapModule());
         }
 
         logEntity.setResponseData(toJson(response.data()));
@@ -96,8 +97,11 @@ public class LoggingService {
     public void logError(SimpleProxyRequest request, Exception error, InterfaceDefinition definition) {
         ProxyExecutionLog logEntity = getOrCreateExecutionLog(request, definition);
 
-        if (definition != null && logEntity.getRfcFunction() == null) {
-            logEntity.setRfcFunction(definition.getRfcFunction());
+        if (definition != null) {
+            if (logEntity.getRfcFunction() == null) {
+                logEntity.setRfcFunction(definition.getRfcFunction());
+            }
+            logEntity.setSapModule(definition.getSapModule());
         }
 
         logEntity.setSuccess(false);
@@ -133,6 +137,7 @@ public class LoggingService {
             .requestId(request.getRequestId())
             .interfaceId(request.getInterfaceId())
             .rfcFunction(definition != null ? definition.getRfcFunction() : null)
+            .sapModule(definition != null ? definition.getSapModule() : null)
             .userId(request.getUserId())
             .ipAddress(request.getIpAddress())
             .requestData(toJson(request.getData()))

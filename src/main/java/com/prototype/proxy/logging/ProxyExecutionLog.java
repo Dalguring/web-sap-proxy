@@ -30,6 +30,9 @@ public class ProxyExecutionLog {
     @Column(nullable = false, length = 100)
     private String interfaceId;
 
+    @Column(length = 20)
+    private String sapModule;
+
     @Column(length = 100)
     private String rfcFunction;
 

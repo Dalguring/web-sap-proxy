@@ -13,6 +13,7 @@ public class InterfaceDefinition {
     private String id;
     private String name;
     private String description;
+    private String sapModule;
     private String rfcFunction;
 
     private List<ImportMapping> importMapping;

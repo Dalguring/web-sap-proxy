@@ -51,7 +51,11 @@ public class ProxyService {
         try {
             definition = registry.get(request.getInterfaceId());
 
-            log.info("Executing interface: {} (RFC: {})", definition.getId(), definition.getRfcFunction());
+            log.info("Executing interface: {} (Module: {}, RFC: {})",
+                definition.getId(),
+                definition.getSapModule(),
+                definition.getRfcFunction()
+            );
 
             Map<String, Object> importParams = mappingEngine.mapImportParameters(
                 request.getData(),

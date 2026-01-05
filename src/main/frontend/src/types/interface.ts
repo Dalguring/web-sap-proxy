@@ -44,6 +44,7 @@ export interface InterfaceDefinition {
     id: string;
     name: string;
     description: string;
+    sapModule: string;
     rfcFunction: string;
     importMapping: ImportMapping[];
     tableMapping: TableMapping[];

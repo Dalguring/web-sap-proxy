@@ -4,6 +4,7 @@ import client from '../api/client';
 import type { InterfaceDefinition } from '../types/interface';
 
 // SAP 타입 정의
+const SAP_MODULES = ['MM', 'PP', 'PM', 'CO', 'SD', 'BC', 'FI'];
 const SAP_TYPES = ['CHAR', 'STRING', 'DECIMAL', 'NUMBER', 'DATE', 'DATETIME', 'INT', 'ARRAY', 'STRUCT', 'TABLE'];
 const DEFAULT_TYPE = 'CHAR';
 const DETAIL_CACHE_PREFIX = 'cached_interface_detail_';
@@ -13,6 +14,7 @@ const initialInterface: InterfaceDefinition = {
     id: '',
     name: '',
     description: '',
+    sapModule: '',
     rfcFunction: '',
     importMapping: [],
     tableMapping: [],
@@ -195,6 +197,11 @@ const InterfaceEditor = () => {
             return false;
         }
 
+        if (!def.sapModule) {
+            alert('SAP Module은 필수 선택 항목입니다.');
+            return false;
+        }
+
         // 신규 생성 시 중복 체크
         if (!id) {
             try {
@@ -364,6 +371,9 @@ const InterfaceEditor = () => {
                         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                             <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">IF ID</span>
                             {def.id}
+                            <span className={`text-xs px-2 py-1 rounded font-bold ml-2 ${def.sapModule ? 'bg-purple-600 text-white' : 'bg-gray-400 text-white'}`}>
+                                MODULE {def.sapModule || '-'}
+                            </span>
                         </h1>
                         <h2 className="text-xl text-gray-700 mt-2 font-semibold">{def.name || '(No Name)'}</h2>
                         <p className="text-gray-500 mt-1 text-sm">{def.description}</p>
@@ -399,16 +409,41 @@ const InterfaceEditor = () => {
                 </div>
             </div>
 
-            <div className="p-6 border-b bg-white">
-                <div className="grid grid-cols-2 gap-6 mb-4">
-                    <div><label className="block text-sm font-medium text-gray-700">Interface ID (URL)</label><input type="text" name="id" value={def.id} onChange={handleBasicChange} disabled={!!id} className="mt-1 block w-full border rounded p-2 bg-gray-50" placeholder="예: WMS_GOODS_MOVE" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700">RFC Function Name</label><input type="text" name="rfcFunction" value={def.rfcFunction} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" placeholder="예: ZPP_IF_WMS_..." /></div>
+            <div className="p-6 border-b bg-white space-y-4">
+                <div className="grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Interface ID (URL)</label>
+                        <input type="text" name="id" value={def.id} onChange={handleBasicChange} disabled={!!id} className="mt-1 block w-full border rounded p-2 bg-gray-50" placeholder="예: WMS_GOODS_MOVE" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">SAP Module <span className="text-red-500">*</span></label>
+                        <select
+                                name="sapModule"
+                                value={def.sapModule}
+                                onChange={(e) => setDef({ ...def, sapModule: e.target.value })}
+                                className="mt-1 block w-full border rounded p-2 bg-white"
+                        >
+                            <option value="">-- 모듈 선택 --</option>
+                            {SAP_MODULES.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
                 </div>
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Interface Name (한글 명칭)</label>
-                    <input type="text" name="name" value={def.name || ''} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" placeholder="예: 재고 이동 인터페이스" />
+
+                <div className="grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Interface Name (한글 명칭)</label>
+                        <input type="text" name="name" value={def.name || ''} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" placeholder="예: 재고 이동 인터페이스" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">RFC Function Name</label>
+                        <input type="text" name="rfcFunction" value={def.rfcFunction} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" placeholder="예: ZPP_IF_WMS_..." />
+                    </div>
                 </div>
-                <div><label className="block text-sm font-medium text-gray-700">Description</label><input type="text" name="description" value={def.description} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" /></div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" name="description" value={def.description} onChange={handleBasicChange} className="mt-1 block w-full border rounded p-2" />
+                </div>
             </div>
 
             <div className="flex border-b border-gray-200 bg-gray-50">
