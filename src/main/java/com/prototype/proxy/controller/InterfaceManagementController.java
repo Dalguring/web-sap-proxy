@@ -2,6 +2,7 @@ package com.prototype.proxy.controller;
 
 import com.prototype.proxy.registry.InterfaceDefinition;
 import com.prototype.proxy.service.InterfaceManagerService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/interfaces")
 @RequiredArgsConstructor
 @Tag(name = "Admin - 인터페이스 관리", description = "인터페이스 생성, 수정, 삭제")
+@Hidden
 public class InterfaceManagementController {
 
     private final InterfaceManagerService managerService;
