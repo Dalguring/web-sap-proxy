@@ -51,3 +51,8 @@ lib/sapjco3.dll
 lib/libsapjco3.so
 *.jcoDestination
 SAP_SYSTEM.jcoDestination
+
+### Frontend Build Output ###
+src/main/resources/static/assets/
+src/main/resources/static/index.html
+src/main/resources/static/vite.svg
