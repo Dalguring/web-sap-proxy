@@ -22,41 +22,42 @@ public class ProxyExecutionLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "request_id", nullable = false, length = 100)
     private String requestId;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "interface_id", nullable = false, length = 100)
     private String interfaceId;
 
-    @Column(length = 20)
+    @Column(name = "sap_module", length = 20)
     private String sapModule;
 
-    @Column(length = 100)
+    @Column(name = "rfc_function", length = 100)
     private String rfcFunction;
 
-    @Column(length = 50)
+    @Column(name = "user_id", length = 50)
     private String userId;
 
-    @Column(length = 50)
+    @Column(name = "ip_address", length = 50)
     private String ipAddress;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "request_data", columnDefinition = "TEXT")
     private String requestData;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "response_data", columnDefinition = "TEXT")
     private String responseData;
 
-    @Column
+    @Column(name = "success")
     private Boolean success;
 
-    @Column(length = 1000)
+    @Column(name = "error_message", length = 1000)
     private String errorMessage;
 
-    @Column
+    @Column(name = "execution_time")
     private Long executionTimeMs;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }

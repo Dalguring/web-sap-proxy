@@ -22,32 +22,33 @@ public class SystemAccessLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "request_id", nullable = false, length = 100)
     private String requestId;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "endpoint", nullable = false, length = 50)
     private String endpoint;
 
-    @Column(length = 20)
+    @Column(name = "method", length = 20)
     private String method;
 
-    @Column(length = 50)
+    @Column(name = "ip_address", length = 50)
     private String ipAddress;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata;
 
-    @Column
+    @Column(name = "success")
     private Boolean success;
 
-    @Column
+    @Column(name = "execution_time")
     private Long executionTimeMs;
 
-    @Column(length = 1000)
+    @Column(name = "error_message", length = 1000)
     private String errorMessage;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }
