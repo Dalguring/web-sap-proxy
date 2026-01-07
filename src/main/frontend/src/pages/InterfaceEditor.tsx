@@ -4,24 +4,18 @@ import client from '../api/client';
 import type { InterfaceDefinition } from '../types/interface';
 
 // --- 상수 및 데이터 정의 ---
-
-// 확장된 SAP 데이터 타입 목록
 const SAP_TYPES = [
-    // 문자열
     'CHAR', 'NCHAR', 'VARCHAR', 'NVARCHAR', 'STRING', 'SHORTTEXT',
-    // 숫자
     'TINYINT', 'SMALLINT', 'INT', 'INTEGER', 'BIGINT',
     'DECIMAL', 'DEC', 'SMALLDECIMAL', 'REAL', 'DOUBLE',
-    // 날짜/시간
     'DATE', 'TIME', 'SECONDDATE', 'TIMESTAMP',
-    // 이진/LOB
     'BINARY', 'VARBINARY', 'CLOB', 'NCLOB', 'BLOB', 'TEXT',
-    // 기타/복합
     'BOOLEAN', 'ARRAY', 'TABLE', 'ST_GEOMETRY', 'ST_POINT'
 ];
 
 const DEFAULT_TYPE = 'CHAR';
 const DETAIL_CACHE_PREFIX = 'cached_interface_detail_';
+const SWAGGER_URL = 'http://localhost:8080/swagger-ui/index.html';
 
 // 초기 상태
 const initialInterface: InterfaceDefinition = {
@@ -30,6 +24,7 @@ const initialInterface: InterfaceDefinition = {
     description: '',
     sapModule: '',
     rfcFunction: '',
+    executable: false,
     importMapping: [],
     tableMapping: [],
     exportMapping: [],
@@ -38,11 +33,10 @@ const initialInterface: InterfaceDefinition = {
 
 type MappingType = 'import' | 'table' | 'export' | 'return';
 
-// 타입 선택 모달 타겟 정보
 interface TypeModalTarget {
     mappingType: MappingType;
-    rowIndex: number;     // import/export의 경우 row index, table/return의 경우 table index
-    fieldIndex?: number;  // table/return의 경우 내부 field index
+    rowIndex: number;
+    fieldIndex?: number;
 }
 
 const InterfaceEditor = () => {
@@ -73,11 +67,12 @@ const InterfaceEditor = () => {
         const fixItem = (item: any) => ({
             ...item,
             type: item.type || DEFAULT_TYPE,
-            remarks: item.remarks || '' // remarks 초기화
+            remarks: item.remarks || ''
         });
 
         return {
             ...data,
+            executable: data.executable ?? false,
             importMapping: data.importMapping?.map(fixItem) || [],
             exportMapping: data.exportMapping?.map(fixItem) || [],
             tableMapping: data.tableMapping?.map((table: any) => ({
@@ -139,7 +134,8 @@ const InterfaceEditor = () => {
 
     // --- 핸들러 ---
     const handleBasicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setDef({ ...def, [e.target.name]: e.target.value });
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setDef({ ...def, [e.target.name]: value });
     };
 
     const handleNumberInput = (e: React.ChangeEvent<HTMLInputElement>, callback: (val: string) => void) => {
@@ -147,7 +143,22 @@ const InterfaceEditor = () => {
         callback(value);
     };
 
-    // 행 추가
+    const handleCancel = () => {
+        if (id) {
+            const cacheKey = DETAIL_CACHE_PREFIX + id;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                setDef(sanitizeData(JSON.parse(cached)));
+            } else {
+                fetchInterfaceDetail(id);
+            }
+            setIsEditing(false);
+        } else {
+            navigate('/');
+        }
+    };
+
+    // 행 추가/삭제 로직
     const addRow = (type: MappingType) => {
         const newDef = { ...def };
         const commonFields = { type: DEFAULT_TYPE, size: 0, remarks: '', example: '' };
@@ -239,8 +250,7 @@ const InterfaceEditor = () => {
         return SAP_TYPES.filter(t => t.toLowerCase().includes(typeSearchTerm.toLowerCase()));
     }, [typeSearchTerm]);
 
-
-    // 저장/삭제 로직
+    // --- 저장/삭제 로직 ---
     const validate = async (): Promise<boolean> => {
         if (!def.id || !def.rfcFunction) {
             alert('ID와 RFC Function은 필수입니다.');
@@ -296,6 +306,65 @@ const InterfaceEditor = () => {
         }
     };
 
+    const copyToClipboard = async (text: string) => {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            return new Promise<void>((resolve, reject) => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    };
+
+    // --- Swagger 실행을 위한 JSON 생성 및 이동 로직 ---
+    const handleExecuteSwagger = () => {
+        const payload: Record<string, any> = {};
+
+        def.importMapping.forEach(item => {
+            if (item.webField) {
+                payload[item.webField] = item.defaultValue || "";
+            }
+        });
+
+        def.tableMapping.forEach(table => {
+            // @ts-ignore
+            const listKey = table.webFields || table.webListKey;
+            if (listKey) {
+                const rowData: Record<string, any> = {};
+                table.fields.forEach(field => {
+                    if (field.webField) {
+                        rowData[field.webField] = field.defaultValue || "";
+                    }
+                });
+                payload[listKey] = [rowData];
+            }
+        });
+
+        const jsonString = JSON.stringify(payload, null, 2);
+
+        copyToClipboard(jsonString).then(() => {
+            alert("📋 JSON 데이터가 클립보드에 복사되었습니다!\nSwagger의 'Try it out' -> Request Body에 붙여넣기 하고 테스트 할 값을 입력하세요.");
+            window.open(SWAGGER_URL, '_blank');
+        }).catch(err => {
+            console.error('클립보드 복사 실패:', err);
+            alert('클립보드 복사에 실패했습니다. Swagger를 바로 엽니다.');
+            window.open(SWAGGER_URL, '_blank');
+        });
+    };
+
     if (loading) return <div>Loading...</div>;
 
     // --- 뷰 모드 렌더링 (읽기 전용) ---
@@ -306,7 +375,7 @@ const InterfaceEditor = () => {
 
         const { web, sap } = (type === 'table' || type === 'return') ? getKeys(type) : { web: '', sap: '' };
         const isTableType = (type === 'table' || type === 'return');
-        const hasExtraFields = type === 'import' || type === 'table';
+        const hasDefaultValues = type === 'import' || type === 'table';
 
         if (!list || list.length === 0) return <div className="text-gray-400 text-sm py-2">데이터가 없습니다.</div>;
 
@@ -316,23 +385,22 @@ const InterfaceEditor = () => {
                         <colgroup>
                             {isTableType ? (
                                     <>
-                                        <col style={{ width: '15%' }} />
-                                        <col style={{ width: '15%' }} />
-                                        <col style={{ width: '15%' }} />
-                                        <col style={{ width: '15%' }} />
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: 'auto' }} />
                                     </>
                             ) : (
                                     <>
-                                        <col style={{ width: '25%' }} />
-                                        <col style={{ width: '25%' }} />
+                                        <col style={{ width: 'auto' }} />
+                                        <col style={{ width: 'auto' }} />
                                     </>
                             )}
-                            <col style={{ width: '8%' }} />
-                            <col style={{ width: '5%' }} />
-                            {/* [View Mode] 순서: Type -> Len -> Remark -> Default -> Example */}
-                            <col style={{ width: '10%' }} /> {/* Remark */}
-                            {hasExtraFields && <col style={{ width: '8%' }} />} {/* Default */}
-                            <col style={{ width: '10%' }} /> {/* Example */}
+                            <col style={{ width: '80px' }} />
+                            <col style={{ width: '100px' }} />
+                            <col style={{ width: '60px' }} />
+                            <col style={{ width: '200px' }} />
+                            <col style={{ width: '150px' }} />
                         </colgroup>
                         <thead className="bg-gray-100 font-bold text-gray-700">
                         <tr>
@@ -344,11 +412,12 @@ const InterfaceEditor = () => {
                             )}
                             <th className="px-4 py-2 border-r text-left">Web Field</th>
                             <th className="px-4 py-2 border-r text-left">SAP Field</th>
+                            <th className={`px-4 py-2 border-r text-center ${hasDefaultValues ? 'bg-yellow-50 text-yellow-800' : ''}`}>
+                                {hasDefaultValues ? 'Default' : ''}
+                            </th>
                             <th className="px-4 py-2 border-r text-center">Type</th>
                             <th className="px-4 py-2 border-r text-center">Len</th>
-                            {/* [View Mode] Remark가 Len 다음으로 이동 */}
                             <th className="px-4 py-2 border-r text-left text-gray-600">Remark</th>
-                            {hasExtraFields && <th className="px-4 py-2 border-r text-left bg-yellow-50 text-yellow-800">Default</th>}
                             <th className="px-4 py-2 text-left bg-blue-50 text-blue-800">Example</th>
                         </tr>
                         </thead>
@@ -368,16 +437,16 @@ const InterfaceEditor = () => {
                                                         </>
                                                 )}
                                                 <td className="px-4 py-2 border-r truncate">
-                                                    {hasExtraFields && field.required && <span className="text-red-500 mr-1">*</span>}
+                                                    {hasDefaultValues && field.required && <span className="text-red-500 mr-1">*</span>}
                                                     {field.webField}
                                                 </td>
                                                 <td className="px-4 py-2 border-r truncate" title={field.sapField}>{field.sapField}</td>
+                                                <td className="px-4 py-2 border-r bg-yellow-50/30 text-gray-600 truncate text-center">
+                                                    {hasDefaultValues ? field.defaultValue : ''}
+                                                </td>
                                                 <td className="px-4 py-2 border-r text-center truncate">{field.type || DEFAULT_TYPE}</td>
                                                 <td className="px-4 py-2 border-r text-center">{field.size}</td>
-                                                {/* Remark */}
                                                 <td className="px-4 py-2 border-r text-gray-500 truncate" title={field.remarks}>{field.remarks || '-'}</td>
-                                                {/* Default */}
-                                                {hasExtraFields && <td className="px-4 py-2 border-r bg-yellow-50/30 text-gray-600 truncate">{field.defaultValue}</td>}
                                                 <td className="px-4 py-2 bg-blue-50/30 text-gray-600 truncate">{field.example || '-'}</td>
                                             </tr>
                                     ));
@@ -385,11 +454,11 @@ const InterfaceEditor = () => {
                                     return (
                                             <tr key={idx} className="bg-red-50">
                                                 <td className="px-4 py-2 border-r">
-                                                    {hasExtraFields && item.required && <span className="text-red-500 mr-1">*</span>}
+                                                    {hasDefaultValues && item.required && <span className="text-red-500 mr-1">*</span>}
                                                     {item[web]}
                                                 </td>
                                                 <td className="px-4 py-2 border-r text-blue-600">{item[sap]}</td>
-                                                <td colSpan={hasExtraFields ? 7 : 6} className="px-4 py-2 text-center text-red-400 italic">필드 없음</td>
+                                                <td colSpan={7} className="px-4 py-2 text-center text-red-400 italic">필드 없음</td>
                                             </tr>
                                     );
                                 }
@@ -397,15 +466,16 @@ const InterfaceEditor = () => {
                                 return (
                                         <tr key={idx} className="hover:bg-gray-50">
                                             <td className="px-4 py-2 border-r truncate" title={item.webField}>
-                                                {hasExtraFields && item.required && <span className="text-red-500 mr-1">*</span>}
+                                                {hasDefaultValues && item.required && <span className="text-red-500 mr-1">*</span>}
                                                 {item.webField}
                                             </td>
                                             <td className="px-4 py-2 border-r truncate" title={type === 'export' ? item.sapParam : item.sapField}>{type === 'export' ? item.sapParam : item.sapField}</td>
+                                            <td className="px-4 py-2 border-r bg-yellow-50/30 text-gray-600 truncate text-center">
+                                                {hasDefaultValues ? item.defaultValue : ''}
+                                            </td>
                                             <td className="px-4 py-2 border-r text-center truncate">{item.type || DEFAULT_TYPE}</td>
                                             <td className="px-4 py-2 border-r text-center">{item.size}</td>
-                                            {/* Remark */}
                                             <td className="px-4 py-2 border-r text-gray-500 truncate" title={item.remarks}>{item.remarks || '-'}</td>
-                                            {hasExtraFields && <td className="px-4 py-2 border-r bg-yellow-50/30 text-gray-600 truncate">{item.defaultValue}</td>}
                                             <td className="px-4 py-2 bg-blue-50/30 text-gray-600 truncate">{item.example || '-'}</td>
                                         </tr>
                                 );
@@ -438,9 +508,23 @@ const InterfaceEditor = () => {
                                             Module: <strong>{def.sapModule}</strong>
                                         </div>
                                 )}
+                                {/* 실행 가능 상태 뱃지 */}
+                                {def.executable && (
+                                        <div className="text-sm font-bold bg-green-100 text-green-700 inline-flex items-center px-2 py-1 rounded border border-green-200">
+                                            ✅ Executable
+                                        </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            {def.executable && (
+                                    <button
+                                            onClick={handleExecuteSwagger}
+                                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold shadow flex items-center gap-1"
+                                    >
+                                        ▶ 실행하기
+                                    </button>
+                            )}
                             <button onClick={() => navigate('/')} className="px-4 py-2 border rounded hover:bg-gray-50">목록으로</button>
                             <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold">수정하기</button>
                         </div>
@@ -458,6 +542,15 @@ const InterfaceEditor = () => {
     // --- 메인 렌더링 (Edit Mode) ---
     const { web, sap } = (activeTab === 'table' || activeTab === 'return') ? getKeys(activeTab) : { web: '', sap: '' };
     const isReqEnabled = activeTab === 'import' || activeTab === 'table';
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: isReqEnabled
+                ? '40px 1.2fr 1.2fr 100px 100px 60px 1.5fr 1.5fr 40px'
+                : '1.2fr 1.2fr 100px 60px 1.5fr 1.5fr 40px',
+        gap: '0.5rem',
+        alignItems: 'center'
+    };
 
     return (
             <div className="bg-white shadow-lg rounded-lg min-h-[80vh] flex flex-col border-2 border-blue-500 relative">
@@ -496,11 +589,25 @@ const InterfaceEditor = () => {
                         </div>
                 )}
 
+                {/* Edit Mode Header */}
                 <div className="p-4 bg-blue-50 border-b border-blue-200 flex justify-between items-center">
                     <span className="font-bold text-blue-800 text-lg">✏️ 편집 모드</span>
-                    <div className="space-x-2">
-                        <button onClick={() => id ? setIsEditing(false) : navigate('/')} className="px-3 py-1 bg-white border border-gray-300 rounded text-sm">취소</button>
-                        <button onClick={handleSave} className="px-4 py-1 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 shadow">저장 완료</button>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1 rounded border border-blue-200 hover:bg-blue-50">
+                            <input
+                                    type="checkbox"
+                                    name="executable"
+                                    checked={def.executable || false}
+                                    onChange={handleBasicChange}
+                                    className="w-4 h-4 text-blue-600 accent-blue-600"
+                            />
+                            <span className="text-sm font-bold text-gray-700">실행 가능 여부</span>
+                        </label>
+
+                        <div className="space-x-2 border-l pl-4 border-blue-200">
+                            <button onClick={handleCancel} className="px-3 py-1 bg-white border border-gray-300 rounded text-sm">취소</button>
+                            <button onClick={handleSave} className="px-4 py-1 bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700 shadow">저장 완료</button>
+                        </div>
                     </div>
                 </div>
 
@@ -540,48 +647,46 @@ const InterfaceEditor = () => {
                         </div>
 
                         {(activeTab === 'import' || activeTab === 'export') && (
-                                <div className="grid grid-cols-12 gap-2 text-xs font-bold text-gray-500 uppercase px-2 mb-2">
-                                    {isReqEnabled && <div className="col-span-1 text-center text-red-600">REQ</div>}
+                                <div style={gridStyle} className="text-xs font-bold text-gray-500 uppercase px-2 mb-2">
+                                    {isReqEnabled && <div className="text-center text-red-600">REQ</div>}
 
-                                    <div className="col-span-2">Web Field</div>
-                                    <div className="col-span-2">SAP Field</div>
-                                    <div className="col-span-2">Type</div>
+                                    <div>Web Field</div>
+                                    <div>SAP Field</div>
+                                    <div>Type</div>
 
-                                    {/* [Edit Mode] 순서: Default -> Len -> Remark -> Ex */}
                                     {isReqEnabled ? (
                                             <>
-                                                <div className="col-span-2 text-yellow-700">Default</div>
-                                                <div className="col-span-1 text-center">Len</div>
-                                                <div className="col-span-1">Remark</div>
-                                                <div className="col-span-1 text-blue-600">Ex</div>
+                                                <div className="text-yellow-700">Default</div>
+                                                <div className="text-center">Len</div>
+                                                <div>Remark</div>
+                                                <div className="text-blue-600">Ex</div>
                                             </>
                                     ) : (
                                             <>
-                                                <div className="col-span-1 text-center">Len</div>
-                                                {/* Export는 Req, Default가 없으므로 Len 다음 Remark */}
-                                                <div className="col-span-1">Remark</div>
-                                                <div className="col-span-3 text-blue-600">Example</div>
+                                                <div className="text-center">Len</div>
+                                                <div>Remark</div>
+                                                <div className="text-blue-600">Example</div>
                                             </>
                                     )}
-                                    <div className="col-span-1 text-center">Del</div>
+                                    <div className="text-center">Del</div>
                                 </div>
                         )}
 
                         {(activeTab === 'import' || activeTab === 'export') && (
                                 <div className="space-y-2">
                                     {(activeTab === 'import' ? def.importMapping : def.exportMapping)?.map((row: any, idx: number) => (
-                                            <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-2 rounded border hover:bg-gray-100 transition-colors">
+                                            <div key={idx} style={gridStyle} className="bg-gray-50 p-2 rounded border hover:bg-gray-100 transition-colors">
                                                 {isReqEnabled && (
-                                                        <div className="col-span-1 text-center">
+                                                        <div className="text-center">
                                                             <input type="checkbox" checked={row.required || false} onChange={(e) => handleMappingChange(activeTab, idx, 'required', e.target.checked)} className="w-5 h-5 text-blue-600 accent-blue-600"/>
                                                         </div>
                                                 )}
 
-                                                <div className="col-span-2"><input type="text" value={row.webField} onChange={(e) => handleMappingChange(activeTab, idx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="Web"/></div>
-                                                <div className="col-span-2"><input type="text" value={activeTab === 'export' ? row.sapParam : row.sapField} onChange={(e) => handleMappingChange(activeTab, idx, activeTab === 'export' ? 'sapParam' : 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="SAP"/></div>
+                                                <div><input type="text" value={row.webField} onChange={(e) => handleMappingChange(activeTab, idx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="Web"/></div>
+                                                <div><input type="text" value={activeTab === 'export' ? row.sapParam : row.sapField} onChange={(e) => handleMappingChange(activeTab, idx, activeTab === 'export' ? 'sapParam' : 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="SAP"/></div>
 
                                                 {/* Type Selector (Modal Trigger) */}
-                                                <div className="col-span-2">
+                                                <div>
                                                     <div
                                                             onClick={() => openTypeModal(activeTab, idx)}
                                                             className="w-full border rounded p-1 text-sm text-center bg-white cursor-pointer hover:border-blue-500 flex justify-between items-center px-2"
@@ -591,23 +696,22 @@ const InterfaceEditor = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* [Edit Mode] Inputs order: Default -> Len -> Remark -> Ex */}
                                                 {isReqEnabled ? (
                                                         <>
-                                                            <div className="col-span-2"><input type="text" value={row.defaultValue || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="기본값"/></div>
-                                                            <div className="col-span-1"><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
-                                                            <div className="col-span-1"><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
-                                                            <div className="col-span-1"><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="Ex"/></div>
+                                                            <div><input type="text" value={row.defaultValue || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="기본값"/></div>
+                                                            <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
+                                                            <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
+                                                            <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="Ex"/></div>
                                                         </>
                                                 ) : (
                                                         <>
-                                                            <div className="col-span-1"><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
-                                                            <div className="col-span-1"><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
-                                                            <div className="col-span-3"><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="예시"/></div>
+                                                            <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
+                                                            <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
+                                                            <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="예시"/></div>
                                                         </>
                                                 )}
 
-                                                <div className="col-span-1 text-center"><button onClick={() => removeRow(activeTab, idx)} className="text-red-500 font-bold hover:bg-red-100 rounded w-6 h-6 flex items-center justify-center mx-auto">×</button></div>
+                                                <div className="text-center"><button onClick={() => removeRow(activeTab, idx)} className="text-red-500 font-bold hover:bg-red-100 rounded w-6 h-6 flex items-center justify-center mx-auto">×</button></div>
                                             </div>
                                     ))}
                                 </div>
@@ -635,45 +739,43 @@ const InterfaceEditor = () => {
                                                 <div className="p-3 bg-gray-50">
                                                     <div className="flex justify-between mb-2"><span className="text-xs font-semibold text-gray-500">Fields Mapping</span><button onClick={() => addTableField(activeTab, tIdx)} className="text-blue-600 text-xs border bg-white px-2 py-1 rounded">+ 필드 추가</button></div>
 
-                                                    <div className="grid grid-cols-12 gap-2 text-[10px] text-gray-500 uppercase px-1 mb-1">
-                                                        {isReqEnabled && <div className="col-span-1 text-center text-red-600">REQ</div>}
+                                                    <div style={gridStyle} className="text-[10px] text-gray-500 uppercase px-1 mb-1">
+                                                        {isReqEnabled && <div className="text-center text-red-600">REQ</div>}
 
-                                                        <div className="col-span-2">Web</div>
-                                                        <div className="col-span-2">SAP</div>
-                                                        <div className="col-span-2">Type</div>
+                                                        <div>Web</div>
+                                                        <div>SAP</div>
+                                                        <div>Type</div>
 
-                                                        {/* [Edit Mode] Table Fields */}
                                                         {isReqEnabled ? (
                                                                 <>
-                                                                    <div className="col-span-2 text-yellow-700">Default</div>
-                                                                    <div className="col-span-1 text-center">Len</div>
-                                                                    <div className="col-span-1">Remark</div>
-                                                                    <div className="col-span-1 text-blue-600">Ex</div>
+                                                                    <div className="text-yellow-700">Default</div>
+                                                                    <div className="text-center">Len</div>
+                                                                    <div>Remark</div>
+                                                                    <div className="text-blue-600">Ex</div>
                                                                 </>
                                                         ) : (
                                                                 <>
-                                                                    <div className="col-span-1 text-center">Len</div>
-                                                                    <div className="col-span-1">Remark</div>
-                                                                    <div className="col-span-3 text-blue-600">Ex</div>
+                                                                    <div className="text-center">Len</div>
+                                                                    <div>Remark</div>
+                                                                    <div className="text-blue-600">Ex</div>
                                                                 </>
                                                         )}
-                                                        <div className="col-span-1"></div>
+                                                        <div></div>
                                                     </div>
 
                                                     <div className="space-y-1">
                                                         {table.fields?.map((field: any, fIdx: number) => (
-                                                                <div key={fIdx} className="grid grid-cols-12 gap-2 items-center">
+                                                                <div key={fIdx} style={gridStyle} className="items-center">
                                                                     {isReqEnabled && (
-                                                                            <div className="col-span-1 text-center">
+                                                                            <div className="text-center">
                                                                                 <input type="checkbox" checked={field.required || false} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'required', e.target.checked)} className="w-4 h-4 accent-blue-600"/>
                                                                             </div>
                                                                     )}
 
-                                                                    <div className="col-span-2"><input type="text" value={field.webField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm"/></div>
-                                                                    <div className="col-span-2"><input type="text" value={field.sapField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50"/></div>
+                                                                    <div><input type="text" value={field.webField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm"/></div>
+                                                                    <div><input type="text" value={field.sapField} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50"/></div>
 
-                                                                    {/* Type Selector (Modal Trigger) for Table Fields */}
-                                                                    <div className="col-span-2">
+                                                                    <div>
                                                                         <div
                                                                                 onClick={() => openTypeModal(activeTab, tIdx, fIdx)}
                                                                                 className="w-full border rounded p-1 text-sm text-center bg-white cursor-pointer hover:border-blue-500 flex justify-between items-center px-2"
@@ -683,23 +785,22 @@ const InterfaceEditor = () => {
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* [Edit Mode] Table Inputs */}
                                                                     {isReqEnabled ? (
                                                                             <>
-                                                                                <div className="col-span-2"><input type="text" value={field.defaultValue || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-xs bg-yellow-50"/></div>
-                                                                                <div className="col-span-1"><input type="text" value={field.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleTableFieldChange(activeTab, tIdx, fIdx, 'size', val))} className="w-full border rounded p-1 text-xs text-center"/></div>
-                                                                                <div className="col-span-1"><input type="text" value={field.remarks || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-xs text-gray-600"/></div>
-                                                                                <div className="col-span-1"><input type="text" value={field.example || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'example', e.target.value)} className="w-full border rounded p-1 text-xs bg-blue-50"/></div>
+                                                                                <div><input type="text" value={field.defaultValue || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-xs bg-yellow-50"/></div>
+                                                                                <div><input type="text" value={field.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleTableFieldChange(activeTab, tIdx, fIdx, 'size', val))} className="w-full border rounded p-1 text-xs text-center"/></div>
+                                                                                <div><input type="text" value={field.remarks || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-xs text-gray-600"/></div>
+                                                                                <div><input type="text" value={field.example || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'example', e.target.value)} className="w-full border rounded p-1 text-xs bg-blue-50"/></div>
                                                                             </>
                                                                     ) : (
                                                                             <>
-                                                                                <div className="col-span-1"><input type="text" value={field.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleTableFieldChange(activeTab, tIdx, fIdx, 'size', val))} className="w-full border rounded p-1 text-xs text-center"/></div>
-                                                                                <div className="col-span-1"><input type="text" value={field.remarks || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-xs text-gray-600"/></div>
-                                                                                <div className="col-span-3"><input type="text" value={field.example || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'example', e.target.value)} className="w-full border rounded p-1 text-xs bg-blue-50"/></div>
+                                                                                <div><input type="text" value={field.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleTableFieldChange(activeTab, tIdx, fIdx, 'size', val))} className="w-full border rounded p-1 text-xs text-center"/></div>
+                                                                                <div><input type="text" value={field.remarks || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-xs text-gray-600"/></div>
+                                                                                <div><input type="text" value={field.example || ''} onChange={(e) => handleTableFieldChange(activeTab, tIdx, fIdx, 'example', e.target.value)} className="w-full border rounded p-1 text-xs bg-blue-50"/></div>
                                                                             </>
                                                                     )}
 
-                                                                    <div className="col-span-1 text-center"><button onClick={() => removeTableField(activeTab, tIdx, fIdx)} className="text-gray-400 hover:text-red-500 font-bold">×</button></div>
+                                                                    <div className="text-center"><button onClick={() => removeTableField(activeTab, tIdx, fIdx)} className="text-gray-400 hover:text-red-500 font-bold">×</button></div>
                                                                 </div>
                                                         ))}
                                                     </div>
@@ -718,7 +819,7 @@ const InterfaceEditor = () => {
                         )}
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => id ? setIsEditing(false) : navigate('/')} className="px-4 py-2 bg-white border border-gray-300 rounded shadow-sm text-gray-700 hover:bg-gray-50">취소</button>
+                        <button onClick={handleCancel} className="px-4 py-2 bg-white border border-gray-300 rounded shadow-sm text-gray-700 hover:bg-gray-50">취소</button>
                         <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 font-bold">저장하기</button>
                     </div>
                 </div>

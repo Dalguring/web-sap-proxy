@@ -15,6 +15,7 @@ public class InterfaceDefinition {
     private String description;
     private String sapModule;
     private String rfcFunction;
+    private Boolean executable;
 
     private List<ImportMapping> importMapping;
     private List<TableMapping> tableMapping;
