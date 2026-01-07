@@ -29,6 +29,7 @@ public class InterfaceDefinition {
         private String type;
         private boolean required;
         private int size;
+        private String remarks;
         private String defaultValue;
         private String example;
     }
@@ -41,6 +42,7 @@ public class InterfaceDefinition {
         private String type;
         private boolean required;
         private int size;
+        private String remarks;
         private String defaultValue;
         private String example;
     }
@@ -58,18 +60,19 @@ public class InterfaceDefinition {
     @Data
     public static class ExportMapping {
 
-        private String sapParam;
         private String webField;
+        private String sapParam;
         private String type;
         private int size;
+        private String remarks;
         private String example;
     }
 
     @Data
     public static class ReturnTableMapping {
 
-        private String sapReturnTable;
         private String webReturnList;
+        private String sapReturnTable;
         private List<FieldMapping> fields;
     }
 }

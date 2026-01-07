@@ -4,6 +4,7 @@ export interface FieldMapping {
     type?: string;
     required?: boolean;
     size?: number;
+    remarks?: string;
     defaultValue?: string;
     example?: string;
 }
@@ -14,6 +15,7 @@ export interface ImportMapping {
     type?: string;
     required?: boolean;
     size?: number;
+    remarks?: string;
     defaultValue?: string;
     example?: string;
 }
@@ -31,6 +33,7 @@ export interface ExportMapping {
     webField: string;
     type?: string;
     size?: number;
+    remarks?: string;
     example?: string;
 }
 
