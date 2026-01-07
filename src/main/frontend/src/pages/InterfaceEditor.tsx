@@ -335,7 +335,7 @@ const InterfaceEditor = () => {
 
         def.importMapping.forEach(item => {
             if (item.webField) {
-                payload[item.webField] = item.defaultValue || "";
+                payload[item.webField] = item.defaultValue || item.example || "";
             }
         });
 
@@ -346,7 +346,7 @@ const InterfaceEditor = () => {
                 const rowData: Record<string, any> = {};
                 table.fields.forEach(field => {
                     if (field.webField) {
-                        rowData[field.webField] = field.defaultValue || "";
+                        rowData[field.webField] = field.defaultValue || field.example || "";
                     }
                 });
                 payload[listKey] = [rowData];
