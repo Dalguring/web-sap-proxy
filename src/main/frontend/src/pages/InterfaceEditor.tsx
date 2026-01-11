@@ -17,7 +17,11 @@ const DEFAULT_TYPE = 'CHAR';
 const DETAIL_CACHE_PREFIX = 'cached_interface_detail_';
 const SWAGGER_URL = 'http://localhost:8080/swagger-ui/index.html';
 
-// 초기 상태
+const MANDATORY_EXPORTS = [
+    { webField: 'E_TYPE', sapParam: 'E_TYPE', type: 'CHAR', size: 1, remarks: '실행 결과 상태 (S/E/P)', example: 'S' },
+    { webField: 'E_MESSAGE', sapParam: 'E_MESSAGE', type: 'CHAR', size: 255, remarks: '결과 메시지', example: '' }
+];
+
 const initialInterface: InterfaceDefinition = {
     id: '',
     name: '',
@@ -48,18 +52,20 @@ const InterfaceEditor = () => {
     const [def, setDef] = useState<InterfaceDefinition>(initialInterface);
     const [loading, setLoading] = useState(false);
 
-    // --- 타입 선택 모달 상태 ---
     const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
     const [typeSearchTerm, setTypeSearchTerm] = useState('');
     const [typeTarget, setTypeTarget] = useState<TypeModalTarget | null>(null);
 
-    // 초기 진입 로직
     useEffect(() => {
         if (id) {
             setIsEditing(false);
             fetchInterfaceDetail(id);
         } else {
             setIsEditing(true);
+            setDef({
+                ...initialInterface,
+                exportMapping: [...MANDATORY_EXPORTS]
+            });
         }
     }, [id]);
 
@@ -178,6 +184,17 @@ const InterfaceEditor = () => {
 
     const removeRow = (type: MappingType, index: number) => {
         const newDef = { ...def };
+
+        if (type === 'export') {
+            const target = newDef.exportMapping[index];
+            if (target.sapParam === 'E_TYPE' || target.sapParam === 'E_MESSAGE') {
+                const isConfirmed = window.confirm(
+                    `'${target.sapParam}'은 표준 권장 파라미터입니다.\n삭제 시 Web에서 결과 상태를 판단하지 못할 수 있습니다.\n\n정말 삭제하시겠습니까?`
+                );
+                if (!isConfirmed) return;
+            }
+        }
+
         if (type === 'import') newDef.importMapping.splice(index, 1);
         else if (type === 'export') newDef.exportMapping.splice(index, 1);
         else if (type === 'table') newDef.tableMapping.splice(index, 1);
@@ -224,7 +241,6 @@ const InterfaceEditor = () => {
         setDef(newDef);
     };
 
-    // --- 타입 모달 관련 핸들러 ---
     const openTypeModal = (mappingType: MappingType, rowIndex: number, fieldIndex?: number) => {
         setTypeTarget({ mappingType, rowIndex, fieldIndex });
         setTypeSearchTerm('');
@@ -331,45 +347,44 @@ const InterfaceEditor = () => {
 
     // --- Swagger 실행을 위한 JSON 생성 및 이동 로직 ---
     const handleExecuteSwagger = () => {
-            const dataPayload: Record<string, any> = {};
+        const dataPayload: Record<string, any> = {};
 
-            def.importMapping.forEach(item => {
-                if (item.webField) {
-                    dataPayload[item.webField] = item.defaultValue || item.example || "";
-                }
-            });
+        def.importMapping.forEach(item => {
+            if (item.webField) {
+                dataPayload[item.webField] = item.defaultValue || item.example || "";
+            }
+        });
 
-            def.tableMapping.forEach(table => {
-                // @ts-ignore
-                const listKey = table.webFields || table.webListKey;
-                if (listKey) {
-                    const rowData: Record<string, any> = {};
-                    table.fields.forEach(field => {
-                        if (field.webField) {
-                            rowData[field.webField] = field.defaultValue || field.example || "";
-                        }
-                    });
-                    dataPayload[listKey] = [rowData];
-                }
-            });
+        def.tableMapping.forEach(table => {
+            const listKey = table.webFields || table.webListKey;
+            if (listKey) {
+                const rowData: Record<string, any> = {};
+                table.fields.forEach(field => {
+                    if (field.webField) {
+                        rowData[field.webField] = field.defaultValue || field.example || "";
+                    }
+                });
+                dataPayload[listKey] = [rowData];
+            }
+        });
 
-            const fullPayload = {
-                interfaceId: def.id,
-                userId: "TEST_USER", // 테스트용 사용자 ID
-                data: dataPayload
-            };
-
-            const jsonString = JSON.stringify(fullPayload, null, 2);
-
-            copyToClipboard(jsonString).then(() => {
-                alert("📋 JSON 데이터가 클립보드에 복사되었습니다!\nSwagger의 'Try it out' -> Request Body에 붙여넣기 하고 테스트 할 값을 입력하세요.");
-                window.open(SWAGGER_URL, '_blank');
-            }).catch(err => {
-                console.error('클립보드 복사 실패:', err);
-                alert('클립보드 복사에 실패했습니다. Swagger를 바로 엽니다.');
-                window.open(SWAGGER_URL, '_blank');
-            });
+        const fullPayload = {
+            interfaceId: def.id,
+            userId: "TEST_USER",
+            data: dataPayload
         };
+
+        const jsonString = JSON.stringify(fullPayload, null, 2);
+
+        copyToClipboard(jsonString).then(() => {
+            alert("📋 JSON 데이터가 클립보드에 복사되었습니다!\nSwagger의 'Try it out' -> Request Body에 붙여넣기 하고 테스트 할 값을 입력하세요.");
+            window.open(SWAGGER_URL, '_blank');
+        }).catch(err => {
+            console.error('클립보드 복사 실패:', err);
+            alert('클립보드 복사에 실패했습니다. Swagger를 바로 엽니다.');
+            window.open(SWAGGER_URL, '_blank');
+        });
+    };
 
     if (loading) return <div>Loading...</div>;
 
@@ -514,7 +529,6 @@ const InterfaceEditor = () => {
                                             Module: <strong>{def.sapModule}</strong>
                                         </div>
                                 )}
-                                {/* 실행 가능 상태 뱃지 */}
                                 {def.executable && (
                                         <div className="text-sm font-bold bg-green-100 text-green-700 inline-flex items-center px-2 py-1 rounded border border-green-200">
                                             ✅ Executable
@@ -595,7 +609,6 @@ const InterfaceEditor = () => {
                         </div>
                 )}
 
-                {/* Edit Mode Header */}
                 <div className="p-4 bg-blue-50 border-b border-blue-200 flex justify-between items-center">
                     <span className="font-bold text-blue-800 text-lg">✏️ 편집 모드</span>
                     <div className="flex items-center gap-4">
@@ -680,46 +693,48 @@ const InterfaceEditor = () => {
 
                         {(activeTab === 'import' || activeTab === 'export') && (
                                 <div className="space-y-2">
-                                    {(activeTab === 'import' ? def.importMapping : def.exportMapping)?.map((row: any, idx: number) => (
-                                            <div key={idx} style={gridStyle} className="bg-gray-50 p-2 rounded border hover:bg-gray-100 transition-colors">
-                                                {isReqEnabled && (
-                                                        <div className="text-center">
-                                                            <input type="checkbox" checked={row.required || false} onChange={(e) => handleMappingChange(activeTab, idx, 'required', e.target.checked)} className="w-5 h-5 text-blue-600 accent-blue-600"/>
+                                    {(activeTab === 'import' ? def.importMapping : def.exportMapping)?.map((row: any, idx: number) => {
+                                            const isStandard = activeTab === 'export' && (row.sapParam === 'E_TYPE' || row.sapParam === 'E_MESSAGE');
+                                            return (
+                                                <div key={idx} style={gridStyle} className="bg-gray-50 p-2 rounded border hover:bg-gray-100 transition-colors">
+                                                    {isReqEnabled && (
+                                                            <div className="text-center">
+                                                                <input type="checkbox" checked={row.required || false} onChange={(e) => handleMappingChange(activeTab, idx, 'required', e.target.checked)} className="w-5 h-5 text-blue-600 accent-blue-600"/>
+                                                            </div>
+                                                    )}
+
+                                                    <div><input type="text" value={row.webField} onChange={(e) => handleMappingChange(activeTab, idx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="Web"/></div>
+                                                    <div><input type="text" value={activeTab === 'export' ? row.sapParam : row.sapField} onChange={(e) => handleMappingChange(activeTab, idx, activeTab === 'export' ? 'sapParam' : 'sapField', e.target.value)} className={`w-full border rounded p-1 text-sm ${isStandard ? 'border-blue-300 bg-blue-50' : 'bg-yellow-50'}`} placeholder="SAP"/></div>
+
+                                                    <div>
+                                                        <div
+                                                                onClick={() => openTypeModal(activeTab, idx)}
+                                                                className="w-full border rounded p-1 text-sm text-center bg-white cursor-pointer hover:border-blue-500 flex justify-between items-center px-2"
+                                                        >
+                                                            <span className="truncate">{row.type || 'CHAR'}</span>
+                                                            <span className="text-[10px] text-gray-400">▼</span>
                                                         </div>
-                                                )}
-
-                                                <div><input type="text" value={row.webField} onChange={(e) => handleMappingChange(activeTab, idx, 'webField', e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="Web"/></div>
-                                                <div><input type="text" value={activeTab === 'export' ? row.sapParam : row.sapField} onChange={(e) => handleMappingChange(activeTab, idx, activeTab === 'export' ? 'sapParam' : 'sapField', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="SAP"/></div>
-
-                                                {/* Type Selector (Modal Trigger) */}
-                                                <div>
-                                                    <div
-                                                            onClick={() => openTypeModal(activeTab, idx)}
-                                                            className="w-full border rounded p-1 text-sm text-center bg-white cursor-pointer hover:border-blue-500 flex justify-between items-center px-2"
-                                                    >
-                                                        <span className="truncate">{row.type || 'CHAR'}</span>
-                                                        <span className="text-[10px] text-gray-400">▼</span>
                                                     </div>
+
+                                                    {isReqEnabled ? (
+                                                            <>
+                                                                <div><input type="text" value={row.defaultValue || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="기본값"/></div>
+                                                                <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
+                                                                <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
+                                                                <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="Ex"/></div>
+                                                            </>
+                                                    ) : (
+                                                            <>
+                                                                <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
+                                                                <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
+                                                                <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="예시"/></div>
+                                                            </>
+                                                    )}
+
+                                                    <div className="text-center"><button onClick={() => removeRow(activeTab, idx)} className="text-red-500 font-bold hover:bg-red-100 rounded w-6 h-6 flex items-center justify-center mx-auto">×</button></div>
                                                 </div>
-
-                                                {isReqEnabled ? (
-                                                        <>
-                                                            <div><input type="text" value={row.defaultValue || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'defaultValue', e.target.value)} className="w-full border rounded p-1 text-sm bg-yellow-50" placeholder="기본값"/></div>
-                                                            <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
-                                                            <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
-                                                            <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="Ex"/></div>
-                                                        </>
-                                                ) : (
-                                                        <>
-                                                            <div><input type="text" value={row.size || ''} onChange={(e) => handleNumberInput(e, (val) => handleMappingChange(activeTab, idx, 'size', val))} className="w-full border rounded p-1 text-sm text-center" placeholder="Len"/></div>
-                                                            <div><input type="text" value={row.remarks || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'remarks', e.target.value)} className="w-full border rounded p-1 text-sm text-gray-600" placeholder="Remark"/></div>
-                                                            <div><input type="text" value={row.example || ''} onChange={(e) => handleMappingChange(activeTab, idx, 'example', e.target.value)} className="w-full border rounded p-1 text-sm bg-blue-50" placeholder="예시"/></div>
-                                                        </>
-                                                )}
-
-                                                <div className="text-center"><button onClick={() => removeRow(activeTab, idx)} className="text-red-500 font-bold hover:bg-red-100 rounded w-6 h-6 flex items-center justify-center mx-auto">×</button></div>
-                                            </div>
-                                    ))}
+                                            );
+                                    })}
                                 </div>
                         )}
 
