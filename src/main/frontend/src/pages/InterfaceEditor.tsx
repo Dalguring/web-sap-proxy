@@ -331,39 +331,45 @@ const InterfaceEditor = () => {
 
     // --- Swagger 실행을 위한 JSON 생성 및 이동 로직 ---
     const handleExecuteSwagger = () => {
-        const payload: Record<string, any> = {};
+            const dataPayload: Record<string, any> = {};
 
-        def.importMapping.forEach(item => {
-            if (item.webField) {
-                payload[item.webField] = item.defaultValue || item.example || "";
-            }
-        });
+            def.importMapping.forEach(item => {
+                if (item.webField) {
+                    dataPayload[item.webField] = item.defaultValue || item.example || "";
+                }
+            });
 
-        def.tableMapping.forEach(table => {
-            // @ts-ignore
-            const listKey = table.webFields || table.webListKey;
-            if (listKey) {
-                const rowData: Record<string, any> = {};
-                table.fields.forEach(field => {
-                    if (field.webField) {
-                        rowData[field.webField] = field.defaultValue || field.example || "";
-                    }
-                });
-                payload[listKey] = [rowData];
-            }
-        });
+            def.tableMapping.forEach(table => {
+                // @ts-ignore
+                const listKey = table.webFields || table.webListKey;
+                if (listKey) {
+                    const rowData: Record<string, any> = {};
+                    table.fields.forEach(field => {
+                        if (field.webField) {
+                            rowData[field.webField] = field.defaultValue || field.example || "";
+                        }
+                    });
+                    dataPayload[listKey] = [rowData];
+                }
+            });
 
-        const jsonString = JSON.stringify(payload, null, 2);
+            const fullPayload = {
+                interfaceId: def.id,
+                userId: "TEST_USER", // 테스트용 사용자 ID
+                data: dataPayload
+            };
 
-        copyToClipboard(jsonString).then(() => {
-            alert("📋 JSON 데이터가 클립보드에 복사되었습니다!\nSwagger의 'Try it out' -> Request Body에 붙여넣기 하고 테스트 할 값을 입력하세요.");
-            window.open(SWAGGER_URL, '_blank');
-        }).catch(err => {
-            console.error('클립보드 복사 실패:', err);
-            alert('클립보드 복사에 실패했습니다. Swagger를 바로 엽니다.');
-            window.open(SWAGGER_URL, '_blank');
-        });
-    };
+            const jsonString = JSON.stringify(fullPayload, null, 2);
+
+            copyToClipboard(jsonString).then(() => {
+                alert("📋 JSON 데이터가 클립보드에 복사되었습니다!\nSwagger의 'Try it out' -> Request Body에 붙여넣기 하고 테스트 할 값을 입력하세요.");
+                window.open(SWAGGER_URL, '_blank');
+            }).catch(err => {
+                console.error('클립보드 복사 실패:', err);
+                alert('클립보드 복사에 실패했습니다. Swagger를 바로 엽니다.');
+                window.open(SWAGGER_URL, '_blank');
+            });
+        };
 
     if (loading) return <div>Loading...</div>;
 
