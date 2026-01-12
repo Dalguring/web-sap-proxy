@@ -73,7 +73,8 @@ const InterfaceEditor = () => {
         const fixItem = (item: any) => ({
             ...item,
             type: item.type || DEFAULT_TYPE,
-            remarks: item.remarks || ''
+            remarks: item.remarks || '',
+            required: item.required === true || item.required === 'true' || item.required === 'Y'
         });
 
         return {
@@ -83,6 +84,8 @@ const InterfaceEditor = () => {
             exportMapping: data.exportMapping?.map(fixItem) || [],
             tableMapping: data.tableMapping?.map((table: any) => ({
                 ...table,
+                required: table.required === true || table.required === 'true' || table.required === 'Y',
+                singleValue: table.singleValue === true || table.singleValue === 'true' || table.singleValue === 'Y',
                 fields: table.fields?.map(fixItem) || []
             })) || [],
             returnTableMapping: data.returnTableMapping?.map((table: any) => ({
@@ -347,31 +350,51 @@ const InterfaceEditor = () => {
 
     // --- Swagger 실행을 위한 JSON 생성 및 이동 로직 ---
     const handleExecuteSwagger = () => {
-        const dataPayload: Record<string, any> = {};
+        const payload: Record<string, any> = {};
 
         def.importMapping.forEach(item => {
             if (item.webField) {
-                dataPayload[item.webField] = item.defaultValue || item.example || "";
+                const isRequired = item.required === true || (item.required as any) === 'true';
+                const hasValue = item.defaultValue || item.example;
+
+                if (isRequired || hasValue) {
+                    payload[item.webField] = item.defaultValue || item.example || "";
+                }
             }
         });
 
         def.tableMapping.forEach(table => {
+            // @ts-ignore
             const listKey = table.webFields || table.webListKey;
+
             if (listKey) {
-                const rowData: Record<string, any> = {};
-                table.fields.forEach(field => {
-                    if (field.webField) {
-                        rowData[field.webField] = field.defaultValue || field.example || "";
-                    }
-                });
-                dataPayload[listKey] = [rowData];
+                const isTableRequired = table.required || (table.required as any) === 'true';
+                const hasFieldValues = table.fields?.some(f => f.defaultValue || f.example);
+
+                if (!isTableRequired && !hasFieldValues) {
+                    payload[listKey] = [];
+                } else {
+                    const rowData: Record<string, any> = {};
+
+                    table.fields?.forEach(field => {
+                        if (field.webField) {
+                            const isFieldRequired = field.required === true || (field.required as any) === 'true';
+                            const hasFieldValue = field.defaultValue || field.example;
+
+                            if (isFieldRequired || hasFieldValue) {
+                                rowData[field.webField] = field.defaultValue || field.example || "";
+                            }
+                        }
+                    });
+                    payload[listKey] = [rowData];
+                }
             }
         });
 
         const fullPayload = {
             interfaceId: def.id,
             userId: "TEST_USER",
-            data: dataPayload
+            data: payload
         };
 
         const jsonString = JSON.stringify(fullPayload, null, 2);

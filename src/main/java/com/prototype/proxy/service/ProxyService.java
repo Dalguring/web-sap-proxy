@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.util.ObjectUtils;
 
 @Slf4j
 @Service
@@ -81,7 +82,6 @@ public class ProxyService {
 
             @SuppressWarnings("unchecked")
             Map<String, Object> sapExport = (Map<String, Object>) rfcResult.get("exportParams");
-
             @SuppressWarnings("unchecked")
             Map<String, List<Map<String, Object>>> sapTables =
                 (Map<String, List<Map<String, Object>>>) rfcResult.get("returnTables");
@@ -92,7 +92,6 @@ public class ProxyService {
                 sapExport,
                 definition.getExportMapping()
             ));
-
             responseData.putAll(mappingEngine.mapReturnTables(
                 sapTables,
                 definition.getReturnTableMapping()
@@ -100,7 +99,25 @@ public class ProxyService {
 
             long executionTime = System.currentTimeMillis() - startTime;
 
-            SimpleProxyResponse response = SimpleProxyResponse.success(
+            //비즈니스 로직 성공 여부 판단
+            boolean isSuccess = true;
+            String message = null;
+
+            String eType = (String) responseData.get("E_TYPE");
+            String eMessage = (String) responseData.get("E_MESSAGE");
+
+            if (!ObjectUtils.isEmpty(eType)) {
+                if ("E".equalsIgnoreCase(eType)) {
+                    isSuccess = false;
+                    message = eMessage;
+                } else if ("P".equalsIgnoreCase(eType)) {
+                    message = eMessage;
+                }
+            }
+
+            SimpleProxyResponse response = SimpleProxyResponse.of(
+                isSuccess,
+                message,
                 responseData,
                 request.getRequestId(),
                 executionTime

@@ -30,10 +30,10 @@ public record SimpleProxyResponse (
     @Schema(description = "성공 여부", requiredMode = Schema.RequiredMode.REQUIRED)
     boolean success,
 
-    @Schema(description = "응답 메시지", example = "OK", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "응답 메시지", requiredMode = Schema.RequiredMode.REQUIRED)
     String message,
 
-    @Schema(description = "SAP 결과 데이터 (가변 구조)", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "SAP 결과 데이터", requiredMode = Schema.RequiredMode.REQUIRED)
     Map<String, Object> data,
 
     String requestId,
@@ -41,15 +41,8 @@ public record SimpleProxyResponse (
     Long executionTimeMs
 ) {
 
-    public static SimpleProxyResponse success(Map<String, Object> data, String requestId,
-        Long executionTimeMs) {
-        return SimpleProxyResponse.builder()
-            .success(true)
-            .data(data)
-            .requestId(requestId)
-            .executionTimeMs(executionTimeMs)
-            .timestamp(LocalDateTime.now())
-            .build();
+    public static SimpleProxyResponse success(Map<String, Object> data, String requestId, Long executionTimeMs) {
+        return of(true, null, data, requestId, executionTimeMs);
     }
 
     public static SimpleProxyResponse error(String message, String requestId) {
@@ -74,5 +67,16 @@ public record SimpleProxyResponse (
 
     public static SimpleProxyResponse error(String message) {
         return error(message, null);
+    }
+
+    public static SimpleProxyResponse of(boolean success, String message, Map<String, Object> data, String requestId, Long executionTimeMs) {
+        return SimpleProxyResponse.builder()
+            .success(success)
+            .message(message)
+            .data(data)
+            .requestId(requestId)
+            .executionTimeMs(executionTimeMs)
+            .timestamp(LocalDateTime.now())
+            .build();
     }
 }
