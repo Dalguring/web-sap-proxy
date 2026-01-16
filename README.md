@@ -1,178 +1,44 @@
-# SAP RFC Proxy Server
+# Interface Proxy Server
 
-Spring Boot 기반 SAP RFC 호출 전용 Proxy 서버입니다.
-WEB / Backend 시스템이 SAP RFC(JCO)를 직접 호출하지 않고
-HTTP 기반 표준 인터페이스로 SAP와 통신할 수 있도록 중계합니다.
+Spring Boot 4.0 및 Java 21 기반의 **SAP RFC 호출 전용 Proxy 서버**입니다.<br/>
+웹 시스템이 SAP JCo 라이브러리를 직접 설치하지 않고도 표준 HTTP REST API를 통해 SAP RFC를 호출하고 결과를 받을 수 있도록 중계합니다.
 
 ---
 
-## Overview
+## 1. 개요
 
 ### 목적
-
-* SAP RFC 호출 로직 중앙화
-* SAP 연동 표준화 (요청/응답, 에러 처리)
-* WEB ↔ SAP 간 결합도 감소
-* 인터페이스 변경 시 코드 수정 최소화
+* **SAP 연동 표준화**: HTTP 기반의 표준 인터페이스(JSON)를 제공하여 SAP 시스템과의 통신 방식을 통일합니다.
+* **로직 중앙화**: SAP RFC 호출 및 매핑 로직을 Proxy 서버에서 통합 관리합니다.
+* **유연성 확보**: GUI를 통해 인터페이스를 정의하고 자동 생성 된 YAML 설정을 통해 코드 수정 없이 새로운 인터페이스를 정의하고 수정할 수 있습니다.
+* **결합도 감소**: 호출 시스템에서 SAP 종속적인 라이브러리(JCo) 설치 및 구성을 배제할 수 있습니다.
 
 ### 주요 특징
-
-* Spring Boot 기반 REST API
-* SAP JCO를 이용한 실제 RFC 호출
-* YAML 기반 인터페이스 정의 및 매핑
-* Stateless Proxy 구조
-* 요청/응답 전문 로깅 지원
+* **YAML 기반 매핑**: SAP 파라미터와 HTTP 요청/응답 필드 간의 매핑을 YAML 파일로 관리합니다.
+* **Full-Stack 구조**: React 기반의 프런트엔드 관리 도구를 포함하여 인터페이스 및 로그를 관리합니다.
+* **실시간 로깅 및 모니터링**: 모든 RFC 요청/응답 전문과 실행 시간을 기록합니다.
+* **Swagger(OpenAPI) 지원**: API 명세 자동화를 통해 연동 편의성을 제공합니다.
 
 ---
 
-## Architecture
+## 2. 기술 스택 (Tech Stack)
+
+### Backend
+* **Language**: Java 21
+* **Framework**: Spring Boot 4.0.0
+* **Library**: SAP JCo 3.x (`lib/sapjco3.jar`), Spring Data JPA, Lombok
+* **Database**: H2 (로컬), PostgreSQL (개발, 운영)
+* **API Doc**: Springdoc-OpenAPI 3.0.0
+
+### Frontend
+* **Library**: React 19, TypeScript
+* **Build Tool**: Vite 7
+* **Styling**: Tailwind CSS
+
+---
+
+## 3. 시스템 아키텍처 (Architecture)
 
 ```text
-[ WEB / Backend ]
-        |
-        | HTTP (JSON)
-        v
-+----------------------+
-|  SAP RFC Proxy       |
-|  (Spring Boot)       |
-+----------------------+
-        |
-        | JCO (RFC)
-        v
-[ SAP System ]
+[ WEB / Backend ] <--- HTTP (JSON) ---> [ Interface Proxy Server ] <--- JCO (RFC) ---> [ SAP System ]
 ```
-
-### Processing Flow
-
-1. HTTP 요청 수신
-2. interfaceId 기준 인터페이스 정의 조회
-3. 요청 데이터 → SAP RFC 파라미터 매핑
-4. SAP RFC 실행 (JCO)
-5. 응답 데이터 정규화
-6. 결과 반환 및 로그 저장
-
----
-
-## Core Components
-
-| Component         | Description         |
-| ----------------- | ------------------- |
-| Controller        | Proxy API 제공, 요청 검증 |
-| ProxyService      | 전체 처리 흐름 제어         |
-| InterfaceRegistry | YAML 인터페이스 정의 로드    |
-| MappingEngine     | 요청/응답 매핑            |
-| RfcExecutor       | SAP RFC 실행 전담       |
-| JcoConfig         | SAP JCO 설정          |
-
----
-
-## Interface Definition (YAML)
-
-```yaml
-interfaceId: WORK_ORDER_CREATE
-sapFunction: Z_RFC_WORK_ORDER_CREATE
-
-import:
-  PLANT: plantCode
-  ORDER_TYPE: orderType
-
-tables:
-  IT_ITEMS:
-    - MATERIAL: materialCode
-      QUANTITY: quantity
-```
-
-장점
-
-* SAP 인터페이스 변경에 유연
-* 허용된 RFC만 호출 가능
-* 운영 중 무중단 확장 가능
-
----
-
-## API Example
-
-### Request
-
-```http
-POST /api/proxy/execute
-Content-Type: application/json
-```
-
-```json
-{
-  "interfaceId": "WORK_ORDER_CREATE",
-  "data": {
-    "plantCode": "1000",
-    "orderType": "PP01",
-    "items": [
-      {
-        "materialCode": "MAT001",
-        "quantity": 10
-      }
-    ]
-  },
-  "requestId": "REQ-20241217-0001"
-}
-```
-
----
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "export": {
-      "ORDER_NO": "4500001234"
-    },
-    "tables": {},
-    "return": [
-      {
-        "TYPE": "S",
-        "MESSAGE": "SUCCESS"
-      }
-    ]
-  },
-  "requestId": "REQ-20241217-0001",
-  "executionTimeMs": 320
-}
-```
-
----
-
-## Error Handling Policy
-
-| Type      | Description            | HTTP Status |
-| --------- | ---------------------- | ----------- |
-| Technical | JCO Exception, Timeout | 500         |
-| Business  | SAP RETURN TYPE = E    | 200         |
-
----
-
-## Logging & Monitoring
-
-* requestId 기준 요청/응답 추적
-* 인터페이스 ID / SAP Function 단위 로깅
-* RFC 실행 시간(ms) 기록
-
----
-
-## Roadmap
-
-* RFC Retry / Timeout 정책
-* 인터페이스 버저닝 관리
-* 보안 강화 (IP Whitelist, 인증 토큰)
-* 대량 호출 성능 최적화
-* 모니터링 대시보드 연동
-
----
-
-## Notes
-
-* SAP RFC 호출 전용 Proxy 서버입니다.
-* 인터페이스 정의 변경 시 YAML 수정 필요
-* 운영 환경에서는 접근 제어가 필요합니다.
-
----
